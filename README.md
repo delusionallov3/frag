@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/assets/banner.svg" alt="Frag" width="100%">
+  <img src=".github/assets/banner.svg" alt="Frag: every gunshot of a Valorant recording on the timeline, C keeps the last 10 seconds as a clip" width="100%">
 </p>
 
 <p align="center">
@@ -20,6 +20,10 @@
 
 <p align="center">
   <a href="https://github.com/delusionallov3/frag/releases/latest"><b>Download for Windows</b></a>
+</p>
+
+<p align="center">
+  <img src=".github/assets/demo.gif" alt="Frag's editor: the playhead runs over a round, kills appear on the waveform, C turns the last 10 seconds into clip R7 · 3K · Vandal, which then exports" width="100%">
 </p>
 
 ---
