@@ -18,7 +18,8 @@ import {
   statsEntries
 } from './store'
 import { autoRecStatus, resetObs, startAutoRec, testObs } from './autorec'
-import { createTray, destroyTray, updateTrayStatus } from './tray'
+import { createTray, destroyTray, setTrayUpdate, updateTrayStatus } from './tray'
+import { checkForUpdates, installUpdate, startUpdater, updateStatus } from './updater'
 import { notify, notifyLinked, setupNotifications, watchExports, watchObsMissing } from './notify'
 import { assetsError, cachedImage, getAssets } from './valapi'
 import { autoSync } from './autosync'
@@ -91,6 +92,28 @@ async function openFolderOrSettings(dir: string | null): Promise<void> {
   if (!dir) return openSettingsInFrag()
   await fs.mkdir(dir, { recursive: true }).catch(() => {})
   await shell.openPath(dir)
+}
+
+/** Une rec en cours ou des exports en attente seraient coupés : on demande avant de redémarrer */
+async function restartToUpdate(): Promise<void> {
+  if (updateStatus().state !== 'ready') return
+  const exporting = listJobs().some((j) => j.status === 'queued' || j.status === 'running')
+  const recording = autoRecStatus().recording
+  if (exporting || recording) {
+    const what = recording ? 'Une rec est en cours : Frag ne pourra pas la lier à son match.' : 'Des exports sont en cours et seront annulés.'
+    const { response } = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Mise à jour de Frag',
+      message: 'Redémarrer maintenant ?',
+      detail: `${what} Sinon, la mise à jour s’installera quand tu quitteras Frag.`,
+      buttons: ['Redémarrer', 'Plus tard'],
+      defaultId: 1,
+      cancelId: 1
+    })
+    if (response !== 0) return
+  }
+  isQuitting = true
+  installUpdate()
 }
 
 function quitForReal(): void {
@@ -208,6 +231,9 @@ function registerIpc(): void {
     return getSettings()
   })
   ipcMain.handle('autorec:status', () => autoRecStatus())
+  ipcMain.handle('update:status', () => updateStatus())
+  ipcMain.handle('update:check', () => checkForUpdates())
+  ipcMain.handle('update:install', () => restartToUpdate())
 
   ipcMain.handle('dialog:folder', async (_e, title: string) => {
     const res = await dialog.showOpenDialog(win!, { title, properties: ['openDirectory', 'createDirectory'] })
@@ -410,7 +436,8 @@ app.whenReady().then(async () => {
       show: showWindow,
       quit: quitForReal,
       openRecs: () => void getSettings().then((s) => openFolderOrSettings(s.recsFolder)),
-      openClips: () => void clipsFolder().then(openFolderOrSettings)
+      openClips: () => void clipsFolder().then(openFolderOrSettings),
+      installUpdate: () => void restartToUpdate()
     },
     autoRecStatus()
   )
@@ -428,6 +455,17 @@ app.whenReady().then(async () => {
       void notifyLinked(path, openRecInFrag)
     },
     () => send('library:changed')
+  )
+  startUpdater(
+    (s) => send('update:status', s),
+    (version) => {
+      setTrayUpdate(version)
+      void notify(
+        `Frag ${version} est prêt`,
+        'La mise à jour s’installera quand tu quitteras Frag. Clique pour redémarrer maintenant.',
+        () => void restartToUpdate()
+      )
+    }
   )
   void detectEncoders()
   void getAssets()

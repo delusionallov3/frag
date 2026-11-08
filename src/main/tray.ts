@@ -10,10 +10,13 @@ export interface TrayHandlers {
   quit: () => void
   openRecs: () => void
   openClips: () => void
+  installUpdate: () => void
 }
 
 let handlers: TrayHandlers | null = null
 let recording = false
+/** version téléchargée, prête à installer */
+let updateReady: string | null = null
 let idleIcon: Electron.NativeImage | null = null
 let recIcon: Electron.NativeImage | null = null
 
@@ -79,6 +82,9 @@ function rebuild(label: string): void {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Ouvrir Frag', click: () => h.show() },
+      ...(updateReady
+        ? ([{ label: `Redémarrer pour installer la ${updateReady}`, click: () => h.installUpdate() }] as const)
+        : []),
       { type: 'separator' },
       { label, enabled: false },
       { type: 'separator' },
@@ -114,6 +120,11 @@ export function updateTrayStatus(status: AutoRecStatus): void {
   if (label === lastLabel) return
   lastLabel = label
   rebuild(label)
+}
+
+export function setTrayUpdate(version: string | null): void {
+  updateReady = version
+  rebuild(lastLabel)
 }
 
 export function destroyTray(): void {

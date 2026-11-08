@@ -447,3 +447,22 @@ export interface ValAssets {
   spike?: string | null
   fetchedAt: number
 }
+
+/* ------------------------------------------------------------------ Mises à jour (releases GitHub) */
+
+export interface UpdateStatus {
+  /** version installée */
+  current: string
+  /**
+   * dev : pas de mise à jour en mode développement
+   * idle : pas encore vérifié · checking : vérification · none : déjà à jour
+   * downloading : nouvelle version en cours de téléchargement · ready : prête, s'installe au redémarrage
+   */
+  state: 'dev' | 'idle' | 'checking' | 'none' | 'downloading' | 'ready' | 'error'
+  /** version trouvée sur GitHub */
+  version: string | null
+  /** 0 à 1 pendant le téléchargement */
+  progress: number
+  error: string | null
+  checkedAt: number | null
+}

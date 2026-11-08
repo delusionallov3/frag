@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FolderOpen, RotateCcw, RefreshCw } from 'lucide-react'
 import { useAssets } from '../lib/assets'
-import type { EncoderPref } from '@shared/types'
+import type { EncoderPref, UpdateStatus } from '@shared/types'
 import { useApp } from '../store'
 import Modal from './Modal'
 import { AccountsField, KeyField, RateField } from './HenrikSetup'
@@ -34,6 +34,56 @@ function AssetsStatus(): JSX.Element {
         </button>
         {error && <span className="assets-err">Impossible de joindre valorant-api.com ({error})</span>}
       </div>
+    </div>
+  )
+}
+
+function updateText(u: UpdateStatus): string {
+  switch (u.state) {
+    case 'dev':
+      return 'Mode développement : pas de mise à jour automatique.'
+    case 'checking':
+      return 'Recherche d’une nouvelle version…'
+    case 'none':
+      return 'Tu as la dernière version.'
+    case 'downloading':
+      return `Téléchargement de la ${u.version ?? 'nouvelle version'}… ${Math.round(u.progress * 100)} %`
+    case 'ready':
+      return `La ${u.version} est prête : elle s’installera quand tu quitteras Frag.`
+    case 'error':
+      return `Impossible de vérifier les mises à jour (${u.error ?? 'erreur inconnue'}).`
+    default:
+      return 'Frag vérifie tout seul les nouvelles versions sur GitHub.'
+  }
+}
+
+function UpdateSettings(): JSX.Element | null {
+  const [u, setU] = useState<UpdateStatus | null>(null)
+  useEffect(() => {
+    void window.frag.updateStatus().then(setU)
+    return window.frag.onUpdateStatus(setU)
+  }, [])
+  if (!u) return null
+  const busy = u.state === 'checking' || u.state === 'downloading'
+  return (
+    <div className="setting">
+      <div className="setting-label">
+        <strong>Mises à jour · version {u.current}</strong>
+        <span>{updateText(u)}</span>
+      </div>
+      {u.state === 'ready' ? (
+        <button className="btn btn-primary btn-sm" onClick={() => void window.frag.installUpdate()}>
+          <RefreshCw size={13} />
+          Redémarrer et mettre à jour
+        </button>
+      ) : (
+        u.state !== 'dev' && (
+          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => void window.frag.checkForUpdates().then(setU)}>
+            <RefreshCw size={13} className={busy ? 'spin' : ''} />
+            Vérifier maintenant
+          </button>
+        )
+      )}
     </div>
   )
 }
@@ -166,6 +216,7 @@ export default function SettingsModal(): JSX.Element | null {
       <HenrikSettings />
       <ObsSettingsSection />
       <AssetsStatus />
+      <UpdateSettings />
 
       <p className="settings-foot">
         Tes clips, marqueurs et réglages sont sauvegardés automatiquement sur ton PC. Rien n’est envoyé en ligne.

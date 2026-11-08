@@ -21,6 +21,7 @@ import type {
   Settings,
   StatsEntry,
   ThumbStrip,
+  UpdateStatus,
   ValAssets,
   VideoEntry,
   VideoMeta,
@@ -96,6 +97,11 @@ const api = {
   autoRecStatus: (): Promise<AutoRecStatus> => ipcRenderer.invoke('autorec:status'),
   onAutoRecStatus: (fn: (s: AutoRecStatus) => void) => on('autorec:status', fn),
   onProjectLinked: (fn: (path: string) => void) => on('project:linked', fn),
+
+  updateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:status'),
+  checkForUpdates: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+  onUpdateStatus: (fn: (s: UpdateStatus) => void) => on('update:status', fn),
   /** Clic sur une notification : ouvrir une rec / les réglages */
   onOpenVideo: (fn: (path: string) => void) => on('ui:openVideo', fn),
   onOpenSettings: (fn: () => void) => on('ui:openSettings', fn),

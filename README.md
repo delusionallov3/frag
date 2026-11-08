@@ -21,6 +21,16 @@ npm run dist
 
 L'icône est dans `build/icon.ico` (remplace-la par la tienne si tu veux, en gardant le même nom). Pour changer le numéro de version, modifie `version` dans `package.json`. Tes réglages, clips et matchs liés restent dans `%APPDATA%\Frag` : la version installée les retrouve.
 
+## Mises à jour
+
+Frag vérifie tout seul les nouvelles versions sur les [releases GitHub](https://github.com/delusionallov3/frag/releases) (au lancement puis toutes les 4 h), les télécharge en arrière-plan et les installe quand tu le quittes. Une notification et le menu de la zone de notification proposent aussi de redémarrer tout de suite. Réglages → **Mises à jour** pour voir ta version ou vérifier à la main.
+
+Pour publier une version :
+
+1. Change `version` dans `package.json`, commite, puis `git tag vX.Y.Z` et pousse le tag.
+2. `npm run dist`.
+3. Crée une release GitHub sur ce tag et joins les trois fichiers de `release/` : `Frag-Setup-X.Y.Z.exe`, `Frag-Setup-X.Y.Z.exe.blockmap` et `latest.yml` (c'est lui que Frag lit pour savoir qu'une version existe).
+
 ## Comment ça marche
 
 1. Au premier lancement, choisis le dossier où OBS enregistre tes games. Frag le surveille et chaque nouvelle rec apparaît toute seule quand tu arrêtes l'enregistrement.

@@ -18,6 +18,12 @@ extraResources:
 asarUnpack:
   - node_modules/ffmpeg-static/**
   - node_modules/ffprobe-static/**
+# Mises à jour : electron-updater lit latest.yml dans la dernière release GitHub
+publish:
+  provider: github
+  owner: delusionallov3
+  repo: frag
+  releaseType: release
 win:
   target: nsis
   icon: build/icon.ico
