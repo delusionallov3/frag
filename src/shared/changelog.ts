@@ -13,6 +13,26 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.0',
+    date: '2026-11-08',
+    title: ['Match recaps with motion design', 'Des résumés de match en motion design'],
+    items: [
+      [
+        'Match panel → Match recap: a video of your best rounds with a match intro, transitions that name each round, a title on every highlight and a zoom on each kill.',
+        'Panneau Match → Résumé du match : une vidéo de tes meilleurs rounds avec une intro du match, des transitions qui annoncent chaque round, un titre sur chaque temps fort et un zoom sur chaque kill.'
+      ],
+      [
+        'Three styles (Clean, Broadcast, Kinetic) and a colour, with a live preview. Every part can be turned on or off.',
+        'Trois styles (Clean, Broadcast, Kinetic) et une couleur, avec un aperçu en direct. Chaque élément s’active ou se désactive.'
+      ],
+      [
+        'A scoreboard with all ten players: agent, rank, K/D/A and ACS, after the intro or at the end.',
+        'Un tableau des dix joueurs : agent, rang, K/D/A et ACS, après l’intro ou à la fin.'
+      ],
+      ['The Montage window gets a Motion option that uses the same style.', 'La fenêtre Montage gagne une option Motion qui reprend le même style.']
+    ]
+  },
+  {
     version: '0.3.1',
     date: '2026-11-08',
     title: ['A new coat of icons', 'De nouvelles icônes'],
