@@ -1,0 +1,32 @@
+appId: gg.frag.app
+productName: Frag
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - package.json
+  # FFprobe est livré pour tous les systèmes : on ne garde que la version Windows
+  - '!node_modules/ffprobe-static/bin/darwin/**'
+  - '!node_modules/ffprobe-static/bin/linux/**'
+# Icône de la zone de notification : lue au lancement depuis resources/
+extraResources:
+  - from: build/icon.ico
+    to: icon.ico
+  - from: build/icon.png
+    to: icon.png
+asarUnpack:
+  - node_modules/ffmpeg-static/**
+  - node_modules/ffprobe-static/**
+win:
+  target: nsis
+  icon: build/icon.ico
+  artifactName: Frag-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Frag
