@@ -43,11 +43,6 @@
 <link rel="stylesheet" href="assets/ui/window/fragment.css">
 <script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
 <script src="assets/backgrounds/backgrounds.js"></script>
-<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
-<link rel="modulepreload" href="assets/moments/moments.js">
-<link rel="modulepreload" href="assets/moments/lib.js">
-<link rel="modulepreload" href="assets/moments/marquee-row/moment.js">
-<link rel="stylesheet" href="assets/moments/marquee-row/moment.css">
 <!-- page CSS: only what sits inside a visual (the drawn Frag windows), the card group's --p-h and the
      language switch -->
 <style>
@@ -184,19 +179,20 @@
   .tog i::after { content: ""; position: absolute; right: 2px; top: 2px; width: 11px; height: 11px; border-radius: 50%; background: #fff; }
   .mp__cut { margin-left: auto; height: 28px; padding: 0 12px; border-radius: 7px; background: #ff4655; color: #0f0f10; font-weight: 600; display: inline-flex; align-items: center; }
   .mp__rounds { display: grid; }
-  .rd { display: grid; grid-template-columns: 28px 56px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 16px; border-bottom: 1px solid var(--u-line); }
-  .rd__n { display: grid; place-items: center; height: 24px; border-radius: 6px; font: 600 12px/1 var(--font-mono); background: rgb(76 195 138 / .14); color: #4cc38a; }
-  .rd__n.is-loss { background: rgb(255 70 85 / .12); color: #ff6b77; }
-  .rd__sc { font: 500 12px/24px var(--font-mono); color: var(--u-muted); }
-  .rd__body { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 24px; }
-  .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 5px; font: 600 11px/1 var(--font-mono); background: var(--u-fill-3); color: var(--u-ink); }
-  .tag.is-accent { background: rgb(255 70 85 / .16); color: #ff6b77; }
-  .kl { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--u-line-2); color: var(--u-text-2); font-size: 12px; white-space: nowrap; }
-  .kl em { font-style: normal; font: 500 11px/1 var(--font-mono); color: var(--u-soft); }
-  .spike { width: 13px; height: 13px; color: #e8c060; }
+  .rd { display: grid; grid-template-columns: 28px 40px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 48px; padding: 8px 16px; border-bottom: 1px solid var(--u-line); }
+  .rd__n { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; font: 500 12px/1 var(--font-mono); background: var(--u-fill-2); color: var(--u-ink); box-shadow: inset 2px 0 0 #4cc38a; }
+  .rd__n.is-loss { box-shadow: inset 2px 0 0 #ff4655; }
+  .rd__sc { font: 400 11px/1 var(--font-mono); color: var(--u-soft); font-variant-numeric: tabular-nums; }
+  .rd__body { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+  .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; font: 500 11px/1 var(--font-mono); background: var(--u-fill-3); color: var(--u-ink); }
+  .tag.is-accent { background: rgb(255 70 85 / .14); color: #ff6b77; }
+  .kl { display: inline-flex; align-items: baseline; gap: 6px; height: 24px; padding: 0 8px; align-items: center; border-radius: 6px; background: var(--u-fill); color: var(--u-ink); font-size: 12px; white-space: nowrap; }
+  .kl em { font: 400 11px/1 var(--font-mono); font-style: normal; color: var(--u-soft); }
+  .spike { width: 14px; height: 14px; color: #e8c060; flex: none; }
 
   /* ------------------------------------------------ the card group */
   #features .panel { --p-h: 300px; }
+  @media (min-width: 1280px) { #features .panel { --p-h: 400px; } }
   #features .fx-ui { top: max(28px, calc(100% - 290px)); }
   @media (min-width: 640px) and (max-width: 1023px) { #features .panel { --p-h: 480px; } }
   @media (max-width: 639px) { #features .panel { --p-h: 560px; } }
@@ -356,7 +352,7 @@
            palette: the client's own (graphite #0f0f10, ink #ededed, one red #ff4655, as the app),
            type geist (the app's own faces; the dealt host would clash with the app UI on every frame), radius soft
      effect: grain-gradient in the one [data-visual] frame (the record card)
-     moments: marquee-row, the auto-clip kinds, last row of #match (counter-rolls dealt first: no real figures to roll)
+     moments: marquee-row dealt, removed at the client's request
      loops: the editor story in the hero (its own pause button) -->
 
 <header class="nav">
@@ -509,21 +505,17 @@
               <div class="mp__auto"><span class="seg"><span>1K+</span><span class="is-on">2K+</span><span>3K+</span></span><span class="tog"><i></i><span data-i18n="app.clutches">Clutches</span></span><span class="mp__cut" data-i18n="app.cut">Cut 7 clips</span></div>
             </div>
             <div class="mp__rounds">
-              <div class="rd"><span class="rd__n">3</span><span class="rd__sc">3–0</span><span class="rd__body"><span class="tag">2K</span><span class="kl">Sheriff <em>→</em> Sova</span><span class="kl">Sheriff <em>→</em> Killjoy</span></span></div>
-              <div class="rd"><span class="rd__n is-loss">4</span><span class="rd__sc">3–1</span><span class="rd__body"><svg class="spike" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 11 6 8 15 5 6z" fill="currentColor"/></svg><span class="kl">Spectre <em>→</em> Reyna</span></span></div>
-              <div class="rd"><span class="rd__n">7</span><span class="rd__sc">5–2</span><span class="rd__body"><span class="tag">3K</span><span class="kl">Vandal <em>→</em> Jett</span><span class="kl">Vandal <em>→</em> Omen</span><span class="kl">Vandal <em>→</em> Sage</span></span></div>
-              <div class="rd"><span class="rd__n">10</span><span class="rd__sc">7–3</span><span class="rd__body"><span class="tag is-accent">Clutch 1v2</span><span class="kl">Vandal <em>→</em> Breach</span><span class="kl">Vandal <em>→</em> Fade</span></span></div>
-              <div class="rd"><span class="rd__n">12</span><span class="rd__sc">8–4</span><span class="rd__body"><span class="tag">ACE</span><span class="kl">Operator <em>→</em> Jett</span><span class="kl">Vandal <em>→</em> Omen</span><span class="kl">Vandal <em>→</em> Sage</span><span class="kl">Ghost <em>→</em> Sova</span><span class="kl">Ghost <em>→</em> Killjoy</span></span></div>
-              <div class="rd"><span class="rd__n is-loss">15</span><span class="rd__sc">9–6</span><span class="rd__body"><span class="kl">Phantom <em>→</em> Raze</span></span></div>
-              <div class="rd"><span class="rd__n">18</span><span class="rd__sc">11–7</span><span class="rd__body"><span class="tag">2K</span><svg class="spike" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 11 6 8 15 5 6z" fill="currentColor"/></svg><span class="kl">Vandal <em>→</em> Viper</span><span class="kl">Vandal <em>→</em> Cypher</span></span></div>
-              <div class="rd"><span class="rd__n">22</span><span class="rd__sc">13–9</span><span class="rd__body"><span class="tag is-accent">Clutch 1v3</span><span class="kl">Sheriff <em>→</em> Brimstone</span></span></div>
+              <div class="rd"><span class="rd__n">3</span><span class="rd__sc">3–0</span><span class="rd__body"><span class="tag">2K</span><span class="kl"><em>Sheriff</em>Sova</span><span class="kl"><em>Sheriff</em>Killjoy</span></span></div>
+              <div class="rd"><span class="rd__n is-loss">4</span><span class="rd__sc">3–1</span><span class="rd__body"><svg class="spike" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2 12.6 4v8L8 14.8 3.4 12V4Z" fill="currentColor" opacity=".28"/><path d="M8 1.2 12.6 4v8L8 14.8 3.4 12V4Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 4.6v6.8M5.6 6.2v3.6M10.4 6.2v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="kl"><em>Spectre</em>Reyna</span></span></div>
+              <div class="rd"><span class="rd__n">7</span><span class="rd__sc">5–2</span><span class="rd__body"><span class="tag">3K</span><span class="kl"><em>Vandal</em>Jett</span><span class="kl"><em>Vandal</em>Omen</span><span class="kl"><em>Vandal</em>Sage</span></span></div>
+              <div class="rd"><span class="rd__n">10</span><span class="rd__sc">7–3</span><span class="rd__body"><span class="tag is-accent">Clutch 1v2</span><span class="kl"><em>Vandal</em>Breach</span><span class="kl"><em>Vandal</em>Fade</span></span></div>
+              <div class="rd"><span class="rd__n">12</span><span class="rd__sc">8–4</span><span class="rd__body"><span class="tag">ACE</span><span class="kl"><em>Operator</em>Jett</span><span class="kl"><em>Vandal</em>Omen</span><span class="kl"><em>Vandal</em>Sage</span><span class="kl"><em>Ghost</em>Sova</span><span class="kl"><em>Ghost</em>Killjoy</span></span></div>
+              <div class="rd"><span class="rd__n is-loss">15</span><span class="rd__sc">9–6</span><span class="rd__body"><span class="kl"><em>Phantom</em>Raze</span></span></div>
+              <div class="rd"><span class="rd__n">18</span><span class="rd__sc">11–7</span><span class="rd__body"><span class="tag">2K</span><svg class="spike" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2 12.6 4v8L8 14.8 3.4 12V4Z" fill="currentColor" opacity=".28"/><path d="M8 1.2 12.6 4v8L8 14.8 3.4 12V4Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 4.6v6.8M5.6 6.2v3.6M10.4 6.2v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="kl"><em>Vandal</em>Viper</span><span class="kl"><em>Vandal</em>Cypher</span></span></div>
+              <div class="rd"><span class="rd__n">22</span><span class="rd__sc">13–9</span><span class="rd__body"><span class="tag is-accent">Clutch 1v3</span><span class="kl"><em>Sheriff</em>Brimstone</span></span></div>
             </div>
           </div>
         </div>
-      </div>
-      <!-- the dealt moment: what Auto clips cuts, as one slow row -->
-      <div class="mq-row mo-mq" data-moment="marquee-row" data-moment-opts='{"speed": 32}'>
-        <ul class="mo-mq__track"><li>2K</li><li>3K</li><li>4K</li><li>Ace</li><li>Clutch 1v1</li><li>Clutch 1v2</li><li>Clutch 1v3</li><li>Clutch 1v4</li><li>Clutch 1v5</li></ul>
       </div>
     </div>
   </section>
