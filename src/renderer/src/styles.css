@@ -1,13 +1,13 @@
 /* ==========================================================================
-   Frag — feuille de style
-   Direction : précis, nerveux, sans bruit. Le HUD de Valorant, une table de
-   montage de nuit. Chrome en gris graphite, un seul rouge (action principale,
-   clip sélectionné, tes kills). Les moments riches : la timeline et la map.
-   Grille de 4 px, Geist + Geist Mono, une seule courbe d'animation.
+   Frag — stylesheet
+   Direction: precise, punchy, no noise. Valorant's HUD meets an editing desk
+   at night. Graphite chrome, a single red (primary action, selected clip,
+   your kills). The rich moments: the timeline and the map.
+   4 px grid, Geist + Geist Mono, a single easing curve.
    ========================================================================== */
 
 :root {
-  /* Neutres graphite */
+  /* Graphite neutrals */
   --canvas: #0f0f10;
   --page: #131314;
   --panel: #161617;
@@ -24,7 +24,7 @@
   --faint: #85858b;
   --wave: #4b4b51;
 
-  /* Un seul accent : le rouge Valorant */
+  /* One accent: Valorant red */
   --accent: #ff4655;
   --accent-fill: #d93341;
   --accent-fill-hover: #e23a48;
@@ -103,7 +103,7 @@ input {
   color: inherit;
 }
 
-/* Toutes les icônes : un trait, une taille */
+/* All icons: one stroke, one size */
 svg.lucide {
   width: 16px;
   height: 16px;
@@ -193,7 +193,7 @@ kbd {
   position: relative;
 }
 
-/* ========================================================================== Barre de titre */
+/* ========================================================================== Title bar */
 
 .titlebar {
   height: var(--titlebar);
@@ -316,7 +316,7 @@ kbd {
   transition: width var(--mid) linear;
 }
 
-/* ========================================================================== Boutons et contrôles */
+/* ========================================================================== Buttons and controls */
 
 .btn {
   height: 36px;
@@ -546,7 +546,7 @@ select.input optgroup {
   pointer-events: none;
 }
 
-/* Case à cocher et interrupteur : blanc cassé, pas de rouge */
+/* Checkbox and switch: off-white, no red */
 .check {
   width: 16px;
   height: 16px;
@@ -645,7 +645,7 @@ select.input optgroup {
   }
 }
 
-/* ========================================================================== Bibliothèque : historique de matchs */
+/* ========================================================================== Library: match history */
 
 .library {
   height: 100%;
@@ -756,7 +756,7 @@ select.input optgroup {
   gap: 8px;
 }
 
-/* Une ligne = une game. Bannière de la map en fond, résultat en bord gauche. */
+/* One row = one game. Map banner in the background, result on the left edge. */
 .mrow {
   position: relative;
   height: 96px;
@@ -961,7 +961,7 @@ select.input optgroup {
   height: 14px;
 }
 
-/* États vides */
+/* Empty states */
 .empty-hero {
   height: 100%;
   display: flex;
@@ -1032,7 +1032,7 @@ select.input optgroup {
   font-weight: 500;
 }
 
-/* ========================================================================== Éditeur */
+/* ========================================================================== Editor */
 
 .editor {
   height: 100%;
@@ -1193,7 +1193,7 @@ select.input optgroup {
   width: 88px;
 }
 
-/* ========================================================================== Panneau latéral */
+/* ========================================================================== Side panel */
 
 .side {
   grid-column: 2;
@@ -1266,7 +1266,7 @@ select.input optgroup {
   font-size: 12px;
 }
 
-/* Liste des clips */
+/* Clip list */
 .clip-list {
   flex: 1;
   min-height: 0;
@@ -1524,7 +1524,7 @@ select.input optgroup {
   cursor: grabbing;
 }
 
-/* Clips : gris clair, le sélectionné passe en rouge */
+/* Clips: light grey, the selected one turns red */
 .tl-clip {
   position: absolute;
   pointer-events: none;
@@ -1594,7 +1594,7 @@ select.input optgroup {
   opacity: 1;
 }
 
-/* Marqueurs perso : petit drapeau neutre */
+/* Custom markers: small neutral flag */
 .tl-marker {
   position: absolute;
   top: 0;
@@ -1688,7 +1688,7 @@ select.input optgroup {
   clip-path: polygon(0 0, 100% 0, 100% 56%, 50% 100%, 0 56%);
 }
 
-/* Piste du match : rounds et portraits d'agents */
+/* Match track: rounds and agent portraits */
 .tl-round {
   position: absolute;
   border-radius: var(--radius-xs);
@@ -1793,7 +1793,7 @@ select.input optgroup {
   object-fit: contain;
 }
 
-/* ========================================================================== Panneau Match */
+/* ========================================================================== Match panel */
 
 .mp {
   overflow-y: auto;
@@ -1833,7 +1833,7 @@ select.input optgroup {
   font-weight: 500;
 }
 
-/* Statut de synchro : texte + point, pas de pastille */
+/* Sync status: text + dot, no pill */
 .mp-status {
   display: inline-flex;
   align-items: center;
@@ -2021,7 +2021,7 @@ select.input optgroup {
   margin-top: 4px;
 }
 
-/* En-tête avec la map : le moment du panneau */
+/* Map header: the panel's highlight */
 .mh {
   position: relative;
   height: 152px;
@@ -2188,7 +2188,7 @@ select.input optgroup {
   object-fit: contain;
 }
 
-/* Tableau des scores */
+/* Scoreboard */
 .msb {
   border-bottom: 1px solid var(--line);
 }
@@ -2270,7 +2270,7 @@ select.input optgroup {
   text-align: right;
 }
 
-/* Aperçu du kill choisi : comme une ligne du killfeed */
+/* Preview of the chosen kill: like a killfeed line */
 .kf {
   display: flex;
   align-items: center;
@@ -2505,7 +2505,7 @@ select.input optgroup {
   margin-top: 16px;
 }
 
-/* ========================================================================== Drawer des exports */
+/* ========================================================================== Exports drawer */
 
 .scrim {
   position: fixed;
@@ -2632,7 +2632,7 @@ select.input optgroup {
   align-items: flex-start;
 }
 
-/* ========================================================================== Modales et réglages */
+/* ========================================================================== Modals and settings */
 
 .modal-scrim {
   position: fixed;
@@ -2744,7 +2744,7 @@ select.input optgroup {
   color: var(--err);
 }
 
-/* Clé, quota et comptes HenrikDev */
+/* HenrikDev key, quota and accounts */
 .hk {
   display: flex;
   flex-direction: column;
@@ -2899,7 +2899,7 @@ select.input optgroup {
   color: var(--warn);
 }
 
-/* Raccourcis */
+/* Shortcuts */
 .shortcuts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2926,7 +2926,7 @@ select.input optgroup {
   flex: none;
 }
 
-/* ========================================================================== Divers */
+/* ========================================================================== Misc */
 
 .toast {
   position: fixed;
@@ -2988,7 +2988,7 @@ select.input optgroup {
   opacity: 0.8;
 }
 
-/* ========================================================================== Revoir */
+/* ========================================================================== Review */
 
 .rv {
   overflow: hidden;
@@ -3799,7 +3799,7 @@ select.input optgroup {
   opacity: 0.35;
 }
 
-/* Aperçu du carton titre */
+/* Title card preview */
 .cp {
   position: relative;
 }
@@ -3836,7 +3836,7 @@ select.input optgroup {
   color: #fff;
 }
 
-/* Calage automatique */
+/* Auto sync */
 .as {
   display: flex;
   flex-direction: column;
@@ -3869,7 +3869,7 @@ select.input optgroup {
   background: var(--line);
 }
 
-/* ---------------------------------------------------------------- Recs courtes */
+/* ---------------------------------------------------------------- Short recordings */
 .mp-note.is-warn {
   display: flex;
   gap: 8px;
@@ -3948,7 +3948,7 @@ select.input optgroup {
   margin-top: 16px;
 }
 
-/* ---------------------------------------------------------------- Enregistrement auto (OBS) */
+/* ---------------------------------------------------------------- Auto-record (OBS) */
 .rec-pill {
   height: 28px;
   padding: 0 10px;
@@ -4021,7 +4021,7 @@ select.input optgroup {
   align-self: flex-start;
 }
 
-/* ---------------------------------------------------------------- Stats : filtre par mode */
+/* ---------------------------------------------------------------- Stats: mode filter */
 .st-modes {
   display: flex;
   flex-wrap: wrap;
@@ -4059,4 +4059,67 @@ select.input optgroup {
   font-style: normal;
   font-size: 11px;
   color: var(--faint);
+}
+
+/* ========================================================================== What's new */
+
+.tb-news.is-new::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.wn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.wn-release header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.wn-version {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+.wn-date {
+  font-size: 12px;
+  color: var(--faint);
+}
+.wn-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.wn-release h3 {
+  margin: 4px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.wn-release ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.wn-release + .wn-release {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.wn-all {
+  align-self: flex-start;
 }

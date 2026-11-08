@@ -1,3 +1,4 @@
+import { tr } from '@shared/i18n'
 import { promises as fs } from 'fs'
 import { basename } from 'path'
 import type {
@@ -17,9 +18,9 @@ import { probe } from './ffmpeg'
 const BASE = process.env['FRAG_HENRIK_BASE'] || 'https://api.henrikdev.xyz'
 const REGIONS: Region[] = ['eu', 'na', 'ap', 'kr', 'latam', 'br']
 
-/* ------------------------------------------------------------------ Limiteur de requêtes
- * Fenêtre glissante de 60 s réglée sur le quota choisi dans les réglages,
- * + respect des en-têtes X-RateLimit-* renvoyés par HenrikDev (si le serveur dit 0 restant, on attend). */
+/* ------------------------------------------------------------------ Rate limiter
+ * 60 s sliding window set to the quota picked in Settings,
+ * + honors the X-RateLimit-* headers sent by HenrikDev (if the server says 0 left, wait). */
 
 const sent: number[] = []
 let detectedLimit: number | null = null
@@ -71,7 +72,7 @@ export function rateInfo(limit: number): RateInfo {
   }
 }
 
-/* ------------------------------------------------------------------ Appels API */
+/* ------------------------------------------------------------------ API calls */
 
 async function rawFetch(path: string, key: string): Promise<Response> {
   try {
@@ -81,9 +82,9 @@ async function rawFetch(path: string, key: string): Promise<Response> {
     })
   } catch (e) {
     if (e instanceof Error && e.name === 'TimeoutError') {
-      throw new Error('HenrikDev ne répond pas (plus de 20 s). Réessaie dans un instant.')
+      throw new Error(tr('HenrikDev isn’t answering (over 20 s). Try again in a moment.', 'HenrikDev ne répond pas (plus de 20 s). Réessaie dans un instant.'))
     }
-    throw new Error('Impossible de joindre HenrikDev. Vérifie ta connexion.')
+    throw new Error(tr('Can’t reach HenrikDev. Check your connection.', 'Impossible de joindre HenrikDev. Vérifie ta connexion.'))
   }
 }
 
@@ -93,19 +94,19 @@ async function errorFrom(res: Response, notFound: string): Promise<Error> {
     const body = (await res.json()) as { errors?: { message?: string }[] }
     detail = body.errors?.[0]?.message ?? ''
   } catch {
-    /* corps vide */
+    /* empty body */
   }
-  if (res.status === 401 || res.status === 403) return new Error('Clé HenrikDev refusée. Vérifie-la dans les réglages.')
+  if (res.status === 401 || res.status === 403) return new Error(tr('HenrikDev key rejected. Check it in Settings.', 'Clé HenrikDev refusée. Vérifie-la dans les réglages.'))
   if (res.status === 404) return new Error(notFound)
-  if (res.status === 429) return new Error('Quota HenrikDev atteint, réessaie dans une minute.')
-  return new Error(`HenrikDev a répondu ${res.status}${detail ? ` : ${detail}` : ''}`)
+  if (res.status === 429) return new Error(tr('HenrikDev quota reached, try again in a minute.', 'Quota HenrikDev atteint, réessaie dans une minute.'))
+  return new Error(tr(`HenrikDev answered ${res.status}${detail ? `: ${detail}` : ''}`, `HenrikDev a répondu ${res.status}${detail ? ` : ${detail}` : ''}`))
 }
 
-/** Appel séquentiel (un à la fois), limité, avec une nouvelle tentative après un 429 */
-function call<T>(path: string, notFound = 'Introuvable sur HenrikDev.'): Promise<T> {
+/** Sequential call (one at a time), rate limited, with one retry after a 429 */
+function call<T>(path: string, notFound = tr('Not found on HenrikDev.', 'Introuvable sur HenrikDev.')): Promise<T> {
   const run = async (): Promise<T> => {
     const key = await getHenrikKey()
-    if (!key) throw new Error('Ajoute ta clé HenrikDev pour récupérer tes matchs.')
+    if (!key) throw new Error(tr('Add your HenrikDev key to fetch your matches.', 'Ajoute ta clé HenrikDev pour récupérer tes matchs.'))
     for (let attempt = 0; attempt < 2; attempt++) {
       await waitForSlot()
       const res = await rawFetch(path, key)
@@ -119,17 +120,17 @@ function call<T>(path: string, notFound = 'Introuvable sur HenrikDev.'): Promise
       }
       throw await errorFrom(res, notFound)
     }
-    throw new Error('Quota HenrikDev atteint, réessaie dans une minute.')
+    throw new Error(tr('HenrikDev quota reached, try again in a minute.', 'Quota HenrikDev atteint, réessaie dans une minute.'))
   }
   const p = chain.then(run, run)
   chain = p.catch(() => {})
   return p
 }
 
-/** Teste une clé (sans l'enregistrer) sur un endpoint léger, et lit le quota renvoyé */
+/** Tests a key (without saving it) on a light endpoint, and reads the returned quota */
 export async function testKey(key: string): Promise<KeyTest> {
   const k = key.trim()
-  if (!k) return { ok: false, error: 'Clé vide.', limit: null, remaining: null, resetIn: null }
+  if (!k) return { ok: false, error: tr('Empty key.', 'Clé vide.'), limit: null, remaining: null, resetIn: null }
   await waitForSlot()
   let res: Response
   try {
@@ -144,24 +145,27 @@ export async function testKey(key: string): Promise<KeyTest> {
     readRateHeaders(res)
     return { ok: true, limit, remaining: remaining === null ? null : Number(remaining), resetIn: reset }
   }
-  const err = await errorFrom(res, 'Endpoint de test introuvable.')
+  const err = await errorFrom(res, tr('Test endpoint not found.', 'Endpoint de test introuvable.'))
   return {
     ok: false,
-    error: res.status === 401 || res.status === 403 ? 'Cette clé est refusée par HenrikDev (invalide ou révoquée).' : err.message,
+    error: res.status === 401 || res.status === 403 ? tr('HenrikDev rejects this key (invalid or revoked).', 'Cette clé est refusée par HenrikDev (invalide ou révoquée).') : err.message,
     limit: null,
     remaining: null,
     resetIn: null
   }
 }
 
-/** Vérifie qu'un Riot ID existe vraiment et récupère PUUID, région, niveau */
+/** Checks a Riot ID really exists and fetches its PUUID, region, level */
 export async function verifyAccount(riotId: string): Promise<RiotAccount> {
   const { name, tag } = parseRiotId(riotId)
   const res = await call<{
     data: { puuid: string; region: string; account_level: number; name: string; tag: string; card: string }
   }>(
     `/valorant/v2/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
-    `Le compte « ${name}#${tag} » n’existe pas (ou n’a jamais joué à Valorant).`
+    tr(
+      `The account “${name}#${tag}” doesn’t exist (or never played Valorant).`,
+      `Le compte « ${name}#${tag} » n’existe pas (ou n’a jamais joué à Valorant).`
+    )
   )
   const d = res.data
   const region = (REGIONS.includes(d.region as Region) ? d.region : 'eu') as Region
@@ -175,7 +179,7 @@ export async function verifyAccount(riotId: string): Promise<RiotAccount> {
   }
 }
 
-/* ------------------------------------------------------------------ Normalisation v4 → MatchData */
+/* ------------------------------------------------------------------ v4 → MatchData normalization */
 
 interface RawPlayerRef {
   puuid: string
@@ -238,7 +242,7 @@ function median(values: number[]): number | null {
 
 export function normalizeMatch(raw: RawMatch): MatchData {
   const roundsRaw = [...(raw.rounds ?? [])].sort((a, b) => a.id - b.id)
-  // Les ids de round peuvent être 0- ou 1-based selon les versions : on se cale sur le plus petit
+  // Round ids can be 0- or 1-based depending on the version: align on the smallest
   const base = roundsRaw.length ? roundsRaw[0].id : 0
   const teamOf = new Map(raw.players.map((p) => [p.puuid, p.team_id]))
 
@@ -272,7 +276,7 @@ export function normalizeMatch(raw: RawMatch): MatchData {
     }
   })
 
-  // Round sans kill (rare) : on estime son début entre ses voisins
+  // Round without kills (rare): estimate its start between its neighbours
   for (let i = 0; i < rounds.length; i++) {
     if (rounds[i].start !== null) continue
     const prev = rounds.slice(0, i).reverse().find((r) => r.start !== null)
@@ -286,9 +290,9 @@ export function normalizeMatch(raw: RawMatch): MatchData {
   const q = raw.metadata.queue
   return {
     id: raw.metadata.match_id,
-    map: raw.metadata.map?.name ?? 'Map inconnue',
+    map: raw.metadata.map?.name ?? tr('Unknown map', 'Map inconnue'),
     mapId: raw.metadata.map?.id ?? null,
-    mode: q?.name ?? q?.mode_type ?? q?.id ?? 'Partie',
+    mode: q?.name ?? q?.mode_type ?? q?.id ?? 'Game',
     region: raw.metadata.region ?? '',
     startedAt: Date.parse(raw.metadata.started_at),
     length: (raw.metadata.game_length_in_ms ?? 0) / 1000,
@@ -323,11 +327,11 @@ export function normalizeMatch(raw: RawMatch): MatchData {
 
 function parseRiotId(riotId: string): { name: string; tag: string } {
   const i = riotId.lastIndexOf('#')
-  if (i <= 0 || i === riotId.length - 1) throw new Error('Riot ID invalide, format attendu : Pseudo#TAG')
+  if (i <= 0 || i === riotId.length - 1) throw new Error(tr('Invalid Riot ID, expected format: Name#TAG', 'Riot ID invalide, format attendu : Pseudo#TAG'))
   return { name: riotId.slice(0, i).trim(), tag: riotId.slice(i + 1).trim() }
 }
 
-// Historique mis en cache 2 min par compte : ouvrir plusieurs recs d'affilée ne coûte qu'une requête
+// Match history cached 2 min per account: opening several recordings in a row costs a single request
 const listCache = new Map<string, { at: number; data: MatchData[] }>()
 
 export async function recentMatches(region: Region, riotId: string, size = 10, force = false): Promise<MatchData[]> {
@@ -337,7 +341,10 @@ export async function recentMatches(region: Region, riotId: string, size = 10, f
   if (!force && hit && Date.now() - hit.at < 120000) return hit.data
   const res = await call<{ data: RawMatch[] }>(
     `/valorant/v4/matches/${region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${size}`,
-    `Compte « ${name}#${tag} » introuvable dans la région ${region.toUpperCase()}.`
+    tr(
+      `Account “${name}#${tag}” not found in region ${region.toUpperCase()}.`,
+      `Compte « ${name}#${tag} » introuvable dans la région ${region.toUpperCase()}.`
+    )
   )
   const data = (res.data ?? []).map(normalizeMatch)
   listCache.set(cacheKey, { at: Date.now(), data })
@@ -347,18 +354,18 @@ export async function recentMatches(region: Region, riotId: string, size = 10, f
 export async function matchById(region: Region, id: string): Promise<MatchData> {
   const res = await call<{ data: RawMatch }>(
     `/valorant/v4/match/${region}/${encodeURIComponent(id.trim())}`,
-    'Match introuvable : vérifie l’ID et la région.'
+    tr('Match not found: check the ID and the region.', 'Match introuvable : vérifie l’ID et la région.')
   )
   return normalizeMatch(res.data)
 }
 
-/* ------------------------------------------------------------------ Heure de la rec */
+/* ------------------------------------------------------------------ Recording time */
 
 const OBS_NAME = /(\d{4})-(\d{2})-(\d{2})[ _T](\d{2})[-_.h](\d{2})[-_.m](\d{2})/
 
 export async function recTimes(videoPath: string): Promise<RecTimes> {
   const { duration } = await probe(videoPath)
-  // Rec lancée pendant que Frag pilotait OBS : on connaît l'heure exacte
+  // Recording started while Frag was driving OBS: we know the exact time
   const meta = await getRecMeta(videoPath)
   if (meta) return { start: meta.start, end: meta.start + duration * 1000, source: 'obs', rounds: meta.rounds }
   const m = OBS_NAME.exec(basename(videoPath))
@@ -373,7 +380,7 @@ export async function recTimes(videoPath: string): Promise<RecTimes> {
   return { start: st.mtimeMs - duration * 1000, end: st.mtimeMs, source: 'mtime' }
 }
 
-/** Classe les matchs récents selon leur recouvrement avec la rec */
+/** Ranks recent matches by how much they overlap the recording */
 export async function candidatesFor(
   videoPath: string,
   region: Region,

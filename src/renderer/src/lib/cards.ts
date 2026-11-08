@@ -1,20 +1,20 @@
 import type { CardAnim, CardLayer, CardStyle } from '@shared/types'
+import { tr } from '@shared/i18n'
 
 /**
- * Cartons titres du montage.
- * Dessinés ici (vraie police, formes nettes) dans un repère 1920×1080, puis envoyés
- * à ffmpeg qui les incruste et les anime. L'aperçu de la fenêtre Montage utilise
- * exactement les mêmes images.
+ * Montage title cards.
+ * Drawn here (real font, crisp shapes) on a 1920×1080 canvas, then handed to ffmpeg,
+ * which overlays and animates them. The Montage window preview uses the exact same images.
  */
 
-export const CARD_STYLES: { value: CardStyle; label: string; hint: string }[] = [
-  { value: 'none', label: 'Aucun', hint: 'Pas de carton' },
-  { value: 'slab', label: 'Plaque', hint: 'Bandeau incliné en couleur, entre par la gauche' },
-  { value: 'bar', label: 'Barre', hint: 'Trait de couleur, titre et infos sur deux lignes' },
-  { value: 'count', label: 'Compteur', hint: 'Gros numéro du clip, façon top 10' },
-  { value: 'cinema', label: 'Cinéma', hint: 'Bandes noires et titre centré' },
-  { value: 'hud', label: 'HUD', hint: 'Pastilles map / agent qui restent tout le clip' },
-  { value: 'classic', label: 'Classique', hint: 'L’ancien carton, en bas à gauche' }
+export const CARD_STYLES = (): { value: CardStyle; label: string; hint: string }[] => [
+  { value: 'none', label: tr('None', 'Aucun'), hint: tr('No title card', 'Pas de carton') },
+  { value: 'slab', label: tr('Slab', 'Plaque'), hint: tr('Slanted color banner sliding in from the left', 'Bandeau incliné en couleur, entre par la gauche') },
+  { value: 'bar', label: tr('Bar', 'Barre'), hint: tr('Color stroke, title and info on two lines', 'Trait de couleur, titre et infos sur deux lignes') },
+  { value: 'count', label: tr('Counter', 'Compteur'), hint: tr('Big clip number, top-10 style', 'Gros numéro du clip, façon top 10') },
+  { value: 'cinema', label: tr('Cinema', 'Cinéma'), hint: tr('Letterbox bars and a centered title', 'Bandes noires et titre centré') },
+  { value: 'hud', label: 'HUD', hint: tr('Map / agent tags that stay for the whole clip', 'Pastilles map / agent qui restent tout le clip') },
+  { value: 'classic', label: tr('Classic', 'Classique'), hint: tr('The original card, bottom left', 'L’ancien carton, en bas à gauche') }
 ]
 
 export const CARD_ACCENTS = ['#ff4655', '#f5c542', '#3ee0b0', '#5aa9ff', '#c58cff', '#f2f2f2']
@@ -28,7 +28,7 @@ export interface CardText {
 
 const FONT = '"Barlow Condensed"'
 const INK = '#0d0f14'
-/** durée d'affichage d'un carton (s) */
+/** how long a card stays on screen (s) */
 const HOLD = 2.9
 
 let fontsReady: Promise<unknown> | null = null
@@ -49,7 +49,7 @@ function font(ctx: Ctx, weight: number, size: number, spacing = 0): void {
 function measure(weight: number, size: number, spacing: number, text: string): number {
   const ctx = document.createElement('canvas').getContext('2d')!
   font(ctx, weight, size, spacing)
-  // l'espacement est aussi ajouté après la dernière lettre : on le retire
+  // letter spacing is also added after the last letter: remove it
   return Math.ceil(ctx.measureText(text).width - spacing)
 }
 
@@ -81,10 +81,10 @@ async function layer(
 
 const upper = (s: string): string => s.toLocaleUpperCase('fr-FR')
 
-/** marge autour des textes sans fond, pour que leur ombre ne soit pas coupée */
+/** margin around unboxed text so its shadow isn't clipped */
 const M = 16
 
-/** Ombre courte sous les textes posés directement sur l'image (lisibles sur une scène claire) */
+/** Short shadow under text drawn straight on the video (readable on bright scenes) */
 function shade(ctx: Ctx): void {
   ctx.shadowColor = 'rgba(0,0,0,0.55)'
   ctx.shadowBlur = 14
@@ -154,7 +154,7 @@ async function slab(t: CardText, accent: string): Promise<CardLayer[]> {
   const sub = upper(t.sub)
   const ts = 92
   const th = 108
-  const sk = Math.round(th * 0.25) // décalage de l'inclinaison
+  const sk = Math.round(th * 0.25) // slant offset
   const tw = measure(800, ts, 0, title)
   const plateW = tw + 56 + sk
   const ss = 28
@@ -220,7 +220,7 @@ async function cinema(t: CardText): Promise<CardLayer[]> {
         shade(ctx)
         font(ctx, 500, ts, 18)
         ctx.fillStyle = '#fff'
-        // le letterSpacing décale le centre d'une demi-lettre
+        // letterSpacing shifts the center by half a letter
         ctx.fillText(title, w / 2 + 9, 80)
         if (sub) {
           font(ctx, 600, ss, 10)

@@ -4,8 +4,8 @@ import { join } from 'path'
 import type { GameState } from '@shared/types'
 
 /**
- * État de Valorant lu sur le client Riot de ce PC (API locale, la même que celle de l'overlay Discord).
- * Rien ne sort du PC : on lit le lockfile du client, puis sa présence (menus / sélection d'agent / en game).
+ * Valorant's state, read from the Riot client on this PC (local API, the same one the Discord overlay uses).
+ * Nothing leaves the PC: read the client's lockfile, then its presence (menus / agent select / in game).
  */
 
 const LOCKFILE =
@@ -18,7 +18,7 @@ interface Lock {
 
 async function readLock(): Promise<Lock | null> {
   try {
-    // format : name:pid:port:password:protocol
+    // format: name:pid:port:password:protocol
     const parts = (await fs.readFile(LOCKFILE, 'utf8')).trim().split(':')
     if (parts.length < 5) return null
     const port = Number(parts[2])
@@ -37,7 +37,7 @@ function localGet<T>(lock: Lock, path: string): Promise<T> {
         path,
         method: 'GET',
         headers: { Authorization: `Basic ${Buffer.from(`riot:${lock.password}`).toString('base64')}` },
-        // certificat auto-signé du client Riot, uniquement sur 127.0.0.1
+        // the Riot client's self-signed certificate, 127.0.0.1 only
         rejectUnauthorized: false,
         timeout: 3000
       },
@@ -54,7 +54,7 @@ function localGet<T>(lock: Lock, path: string): Promise<T> {
         })
       }
     )
-    req.on('timeout', () => req.destroy(new Error('client Riot : délai dépassé')))
+    req.on('timeout', () => req.destroy(new Error('Riot client: timed out')))
     req.on('error', reject)
     req.end()
   })
@@ -68,16 +68,16 @@ interface Presence {
 
 export interface GameInfo {
   state: GameState
-  /** chemin interne de la map (/Game/Maps/Ascent/Ascent) */
+  /** in-game map path (/Game/Maps/Ascent/Ascent) */
   map: string | null
   queue: string | null
-  /** score de ton équipe / de l'équipe adverse pendant la game */
+  /** your team's / the enemy team's score during the game */
   score: { ally: number; enemy: number } | null
-  /** « Rounds » pour les modes à rounds */
+  /** "Rounds" for round-based modes */
   scoreType: string | null
 }
 
-/** Cherche un champ à la racine de la présence ou dans ses sous-objets (le format a changé plusieurs fois) */
+/** Looks for a field at the presence root or in its sub-objects (the format changed several times) */
 function pick(priv: Record<string, unknown>, key: string): unknown {
   if (priv[key] !== undefined) return priv[key]
   for (const v of Object.values(priv)) {
@@ -105,7 +105,7 @@ export async function gameInfo(): Promise<GameInfo> {
     if (!me) return closed
     if (!me.private) return { ...closed, state: 'menus' }
     const priv = JSON.parse(Buffer.from(me.private, 'base64').toString('utf8')) as Record<string, unknown>
-    // Nouveau format (matchPresenceData, partyPresenceData…) ou ancien format à plat : pick() gère les deux
+    // New format (matchPresenceData, partyPresenceData…) or the old flat one: pick() handles both
     const loop = String(pick(priv, 'sessionLoopState') ?? 'MENUS')
     const map = String(pick(priv, 'matchMap') ?? '') || null
     const queue = String(pick(priv, 'queueId') ?? '') || null
@@ -114,12 +114,12 @@ export async function gameInfo(): Promise<GameInfo> {
     const ally = Number(pick(priv, 'partyOwnerMatchScoreAllyTeam'))
     const enemy = Number(pick(priv, 'partyOwnerMatchScoreEnemyTeam'))
     const score = Number.isFinite(ally) && Number.isFinite(enemy) ? { ally, enemy } : null
-    // Le stand de tir n'est pas une game
+    // The Range isn't a game
     if (/shootingrange/i.test(flow) || /\/Range$/i.test(map ?? '')) return { ...closed, state: 'menus', map, queue }
     const state: GameState = loop === 'INGAME' ? 'ingame' : loop === 'PREGAME' ? 'pregame' : 'menus'
     return { state, map, queue, score: state === 'ingame' ? score : null, scoreType }
   } catch {
-    // client en train de démarrer ou de se fermer
+    // client starting up or shutting down
     return closed
   }
 }

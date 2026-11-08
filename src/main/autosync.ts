@@ -1,25 +1,26 @@
+import { tr } from '@shared/i18n'
 import { spawn } from 'child_process'
 import type { AutoSyncResult, MatchData } from '@shared/types'
 import { FFMPEG, probe } from './ffmpeg'
 
 /**
- * Calage automatique : on regarde la zone du killfeed (en haut à droite).
- * Chaque nouvelle ligne de kill y fait apparaître du texte clair d'un coup :
- * on mesure ces « apparitions » image par image, puis on cherche le décalage
- * pour lequel les kills du match (tous les joueurs) tombent pile dessus.
+ * Auto sync: watch the killfeed area (top right).
+ * Every new kill line makes bright text appear at once:
+ * measure these "appearances" frame by frame, then look for the offset
+ * where the match's kills (all players) land right on them.
  */
 
 const FPS = 8
 const W = 96
 const H = 48
-const SEARCH = 75 // secondes de part et d'autre de l'estimation
+const SEARCH = 75 // seconds on each side of the estimate
 
 interface Window {
   start: number
   end: number
 }
 
-/** Signal d'apparition dans le killfeed, échantillonné à FPS images/s sur une fenêtre */
+/** Killfeed appearance signal, sampled at FPS frames/s over a window */
 function killfeedSignal(path: string, win: Window): Promise<Float32Array> {
   return new Promise((resolve, reject) => {
     const args = [
@@ -29,7 +30,7 @@ function killfeedSignal(path: string, win: Window): Promise<Float32Array> {
       '-t', (win.end - win.start).toFixed(2),
       '-i', path,
       '-an',
-      // zone du killfeed : ~30 % de large, ~26 % de haut, coin supérieur droit
+      // killfeed area: ~30% wide, ~26% tall, top-right corner
       '-vf', `fps=${FPS},crop=iw*0.30:ih*0.26:iw*0.69:ih*0.06,scale=${W}:${H},format=gray`,
       '-f', 'rawvideo', 'pipe:1'
     ]
@@ -58,13 +59,13 @@ function killfeedSignal(path: string, win: Window): Promise<Float32Array> {
     proc.stderr.on('data', (d: Buffer) => (err += d.toString()))
     proc.on('error', reject)
     proc.on('close', (code) => {
-      if (code !== 0 && out.length === 0) reject(new Error(err.trim() || 'Analyse vidéo impossible'))
+      if (code !== 0 && out.length === 0) reject(new Error(err.trim() || tr('Video analysis failed', 'Analyse vidéo impossible')))
       else resolve(Float32Array.from(out))
     })
   })
 }
 
-/** Normalise un signal : 0 pour le bruit habituel, ~1+ pour un pic net */
+/** Normalizes a signal: 0 for the usual noise, ~1+ for a clear peak */
 function normalize(sig: Float32Array): Float32Array {
   const sorted = Array.from(sig).sort((a, b) => a - b)
   const med = sorted[Math.floor(sorted.length / 2)] ?? 0
@@ -81,9 +82,9 @@ export async function autoSync(
 ): Promise<AutoSyncResult> {
   const { duration } = await probe(videoPath)
   const kills = match.kills.map((k) => k.tMatch).sort((a, b) => a - b)
-  if (kills.length < 4) throw new Error('Pas assez de kills dans ce match pour caler automatiquement')
+  if (kills.length < 4) throw new Error(tr('Not enough kills in this match to sync automatically', 'Pas assez de kills dans ce match pour caler automatiquement'))
 
-  // Fenêtres à analyser : autour des rounds les plus chargés en kills, sinon toute la vidéo
+  // Windows to analyse: around the rounds with the most kills, otherwise the whole video
   let windows: Window[]
   if (guessOffset !== null) {
     const byRound = new Map<number, number[]>()
@@ -96,7 +97,7 @@ export async function autoSync(
     windows = candidates
       .map((r) => ({ start: Math.max(0, r.a - SEARCH - 2), end: Math.min(duration, r.b + SEARCH + 6) }))
       .sort((x, y) => x.start - y.start)
-    // fusion des fenêtres qui se chevauchent
+    // merge overlapping windows
     const merged: Window[] = []
     for (const w of windows) {
       const last = merged[merged.length - 1]
@@ -109,7 +110,7 @@ export async function autoSync(
   }
   if (!windows.length) windows = [{ start: 0, end: duration }]
 
-  // Signal mis bout à bout, avec le temps vidéo de chaque échantillon
+  // Signal stitched together, with each sample's video time
   const times: number[] = []
   const values: number[] = []
   const totalLen = windows.reduce((n, w) => n + (w.end - w.start), 0)
@@ -125,7 +126,7 @@ export async function autoSync(
   }
 
   const at = (t: number): number => {
-    // max du signal entre t - 0,2 s et t + 0,3 s
+    // signal max between t - 0.2 s and t + 0.3 s
     let best = 0
     let lo = 0
     let hi = times.length - 1
@@ -139,7 +140,7 @@ export async function autoSync(
   }
   const covered = (t: number): boolean => windows.some((w) => t >= w.start + 0.5 && t <= w.end - 1)
 
-  // Balayage des décalages possibles
+  // Sweep the possible offsets
   const center = guessOffset ?? 0
   const range = guessOffset !== null ? SEARCH : Math.max(duration, match.length)
   const step = 1 / FPS
@@ -157,19 +158,19 @@ export async function autoSync(
       if (v >= 1) hits++
       n++
     }
-    // score total (pas une moyenne) : un décalage qui ne couvre que 4 kills ne peut pas gagner par chance
+    // total score (not an average): an offset covering only 4 kills can't win by luck
     if (n >= 4) scores.push({ offset, score: s, n, hits })
   }
-  if (!scores.length) throw new Error('La vidéo ne recouvre pas assez de kills pour caler automatiquement')
+  if (!scores.length) throw new Error(tr('The video doesn’t cover enough kills to sync automatically', 'La vidéo ne recouvre pas assez de kills pour caler automatiquement'))
 
   scores.sort((a, b) => b.score - a.score)
   const top = scores[0]
-  // Le pic est un petit plateau (fenêtre de tolérance) : on prend son centre
+  // The peak is a small plateau (tolerance window): take its center
   const plateau = scores.filter((x) => Math.abs(x.offset - top.offset) <= 0.6 && x.score >= top.score * 0.97)
   const best = { ...top, offset: plateau.reduce((n, x) => n + x.offset, 0) / plateau.length }
-  // Concurrent : le meilleur décalage à plus d'1 s (les kills groupés créent des quasi-doublons à ±2 s)
+  // Runner-up: the best offset more than 1 s away (grouped kills create near-duplicates at ±2 s)
   const rival = scores.find((s) => Math.abs(s.offset - best.offset) > 1)
-  // Confiance : part des kills qui tombent sur un pic, et avance nette sur le concurrent
+  // Confidence: share of kills landing on a peak, and a clear lead over the runner-up
   const hitRate = best.hits / best.n
   const gap = (best.hits - (rival?.hits ?? 0)) / best.n
   const confidence = Math.max(0, Math.min(1, hitRate * Math.min(1, gap / 0.25)))

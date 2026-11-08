@@ -9,6 +9,8 @@ import {
   useState,
   type ReactNode
 } from 'react'
+import { tr } from '@shared/i18n'
+import { keyCap } from '../lib/keys'
 import { ZoomIn, ZoomOut, Maximize2, Magnet } from 'lucide-react'
 import { useLookup } from '../lib/assets'
 import VImg from './VImg'
@@ -105,7 +107,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
   const pps = fit ? fitPps : Math.min(MAX_PPS, Math.max(fitPps, ppsRaw))
   const contentW = PAD * 2 + p.duration * pps
 
-  // Taille du viewport
+  // Viewport size
   useLayoutEffect(() => {
     const el = wrapRef.current
     if (!el) return
@@ -115,7 +117,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
     return () => ro.disconnect()
   }, [])
 
-  // Applique le scroll calculé lors d'un zoom une fois la largeur mise à jour
+  // Apply the scroll computed during a zoom once the width has updated
   useLayoutEffect(() => {
     const sc = scrollRef.current
     if (sc && pendingScroll.current !== null) {
@@ -158,7 +160,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
     [zoomTo, pps]
   )
 
-  // Molette : Ctrl = zoom autour du curseur, sinon défilement horizontal
+  // Wheel: Ctrl = zoom around the cursor, otherwise horizontal scroll
   useEffect(() => {
     const sc = scrollRef.current
     if (!sc) return
@@ -177,7 +179,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
     return () => sc.removeEventListener('wheel', onWheel)
   }, [pps, zoomTo])
 
-  // Suit la tête de lecture pendant la lecture
+  // Follow the playhead during playback
   useEffect(() => {
     const sc = scrollRef.current
     if (!sc || !p.playing || dragging || fit) return
@@ -187,7 +189,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
     }
   }, [p.time, p.playing, pps, width, dragging, fit])
 
-  /* ------------------------------ Dessin canvas ------------------------------ */
+  /* ------------------------------ Canvas drawing ------------------------------ */
 
   const draw = useCallback(() => {
     const c = canvasRef.current
@@ -214,12 +216,12 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
     const cFaint = css('--faint') || '#5c5c66'
     const cWave = css('--wave') || '#4a4a56'
 
-    // Fonds des pistes
+    // Track backgrounds
     ctx.fillStyle = cTrack
     ctx.fillRect(x0, TRACK_TOP, x1 - x0, THUMB_H)
     ctx.fillRect(x0, TRACK_TOP + THUMB_H + 1, x1 - x0, WAVE_H - 1)
 
-    // Règle
+    // Ruler
     const [major, minor] = TICKS.find(([m]) => m * pps >= 84) ?? TICKS[TICKS.length - 1]
     const tStart = Math.max(0, (sl - PAD) / pps)
     const tEnd = Math.min(p.duration, (sl + W - PAD) / pps)
@@ -238,7 +240,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
     ctx.fillStyle = cLine
     ctx.fillRect(0, RULER_H - 0.5, W, 1)
 
-    // Vignettes
+    // Thumbnails
     const th = p.thumbs
     if (th && th.count > 0) {
       const tw = THUMB_H * p.aspect
@@ -269,7 +271,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
       ctx.restore()
     }
 
-    // Forme d'onde
+    // Waveform
     const wv = p.wave
     if (wv && wv.peaks.length) {
       const ps = wv.perSecond
@@ -386,7 +388,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
     if (d && d.kind !== 'scrub') p.onClipEditEnd()
   }
 
-  /* ------------------------------ Rendu ------------------------------ */
+  /* ------------------------------ Render ------------------------------ */
 
   const zoomValue = useMemo(() => {
     const r = MAX_PPS / fitPps
@@ -403,12 +405,12 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
           <button
             className={`icon-btn ${p.snap ? 'is-on' : ''}`}
             onClick={() => p.onSnapChange(!p.snap)}
-            title="Magnétisme (aimante les bords sur la tête de lecture, les marqueurs et les autres clips)"
+            title={tr('Snapping (edges stick to the playhead, markers and other clips)', 'Magnétisme (aimante les bords sur la tête de lecture, les marqueurs et les autres clips)')}
           >
             <Magnet size={15} />
           </button>
           <span className="tl-sep" />
-          <button className="icon-btn" onClick={() => zoomTo(pps / 1.6)} title="Dézoomer (-)">
+          <button className="icon-btn" onClick={() => zoomTo(pps / 1.6)} title={`${tr('Zoom out', 'Dézoomer')} (-)`}>
             <ZoomOut size={15} />
           </button>
           <input
@@ -420,10 +422,10 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
             value={zoomValue}
             onChange={(e) => zoomTo(fitPps * Math.pow(MAX_PPS / fitPps, Number(e.target.value)))}
           />
-          <button className="icon-btn" onClick={() => zoomTo(pps * 1.6)} title="Zoomer (+)">
+          <button className="icon-btn" onClick={() => zoomTo(pps * 1.6)} title={`${tr('Zoom in', 'Zoomer')} (+)`}>
             <ZoomIn size={15} />
           </button>
-          <button className={`icon-btn ${fit ? 'is-on' : ''}`} onClick={() => zoomTo(0)} title="Tout afficher (0)">
+          <button className={`icon-btn ${fit ? 'is-on' : ''}`} onClick={() => zoomTo(0)} title={`${tr('Fit all', 'Tout afficher')} (${keyCap('0')})`}>
             <Maximize2 size={14} />
           </button>
         </div>
@@ -457,7 +459,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
                   key={r.index}
                   className={`tl-round ${r.won ? 'is-win' : r.won === false ? 'is-loss' : ''}`}
                   style={{ left: PAD + s0 * pps, width: w, top: RULER_H + 2, height: MATCH_H - 4 }}
-                  title={`Round ${r.n} · ${r.won ? 'gagné' : r.won === false ? 'perdu' : ''} · ${r.score}`}
+                  title={`Round ${r.n} · ${r.won ? tr('won', 'gagné') : r.won === false ? tr('lost', 'perdu') : ''} · ${r.score}`}
                 >
                   {w > 30 && <span>R{r.n}</span>}
                 </div>
@@ -524,7 +526,7 @@ const Timeline = forwardRef<TimelineHandle, Props>(function Timeline(p, ref) {
               >
                 <button
                   className="tl-marker-flag"
-                  title={`${m.label ? `${m.label}\n` : ''}Clic : sélectionner · Suppr ou clic droit : supprimer`}
+                  title={`${m.label ? `${m.label}\n` : ''}${tr('Click: select · Del or right-click: delete', 'Clic : sélectionner · Suppr ou clic droit : supprimer')}`}
                   onPointerDown={(e) => {
                     e.stopPropagation()
                     if (e.button === 0) {

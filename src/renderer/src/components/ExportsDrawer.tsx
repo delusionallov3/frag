@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { X, FolderOpen, RotateCcw, Square, CheckCircle2, AlertCircle, Clock, Loader2, Ban } from 'lucide-react'
 import type { ExportJob } from '@shared/types'
+import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { baseName, fmtClipLen } from '../lib/format'
 
-const ENCODER_LABEL = { nvenc: 'NVENC', cpu: 'CPU', copy: 'Copie' } as const
+const encoderLabel = (e: 'nvenc' | 'cpu' | 'copy'): string => (e === 'copy' ? tr('Copy', 'Copie') : e.toUpperCase())
 
 function JobRow({ job }: { job: ExportJob }): JSX.Element {
   const pct = Math.round(job.progress * 100)
@@ -30,10 +31,10 @@ function JobRow({ job }: { job: ExportJob }): JSX.Element {
         </div>
         <div className="job-sub">
           <span>{fmtClipLen(job.end - job.start)}</span>
-          {job.encoder && <span className="pill">{ENCODER_LABEL[job.encoder]}</span>}
-          {job.status === 'running' && <span>{pct} %</span>}
-          {job.status === 'queued' && <span>En attente</span>}
-          {job.status === 'canceled' && <span>Annulé</span>}
+          {job.encoder && <span className="pill">{encoderLabel(job.encoder)}</span>}
+          {job.status === 'running' && <span>{tr(`${pct}%`, `${pct} %`)}</span>}
+          {job.status === 'queued' && <span>{tr('Queued', 'En attente')}</span>}
+          {job.status === 'canceled' && <span>{tr('Canceled', 'Annulé')}</span>}
         </div>
         {job.status === 'running' && (
           <div className="bar">
@@ -44,17 +45,17 @@ function JobRow({ job }: { job: ExportJob }): JSX.Element {
       </div>
       <div className="job-actions">
         {job.status === 'done' && (
-          <button className="icon-btn" title="Afficher dans le dossier" onClick={() => window.frag.showItem(job.outputPath)}>
+          <button className="icon-btn" title={tr('Show in folder', 'Afficher dans le dossier')} onClick={() => window.frag.showItem(job.outputPath)}>
             <FolderOpen size={15} />
           </button>
         )}
         {(job.status === 'running' || job.status === 'queued') && (
-          <button className="icon-btn is-danger" title="Annuler" onClick={() => window.frag.cancelJob(job.id)}>
+          <button className="icon-btn is-danger" title={tr('Cancel', 'Annuler')} onClick={() => window.frag.cancelJob(job.id)}>
             <Square size={13} />
           </button>
         )}
         {(job.status === 'error' || job.status === 'canceled') && (
-          <button className="icon-btn" title="Réessayer" onClick={() => window.frag.retryJob(job.id)}>
+          <button className="icon-btn" title={tr('Retry', 'Réessayer')} onClick={() => window.frag.retryJob(job.id)}>
             <RotateCcw size={15} />
           </button>
         )}
@@ -100,18 +101,20 @@ export default function ExportsDrawer(): JSX.Element {
           {outFolder && (
             <button className="btn btn-ghost btn-sm" onClick={() => window.frag.openFolder(outFolder)}>
               <FolderOpen size={14} />
-              Ouvrir le dossier
+              {tr('Open folder', 'Ouvrir le dossier')}
             </button>
           )}
           {finished > 0 && (
             <button className="link-btn" onClick={() => window.frag.clearJobs()}>
-              Vider les terminés
+              {tr('Clear finished', 'Vider les terminés')}
             </button>
           )}
         </div>
         <div className="drawer-body">
           {list.length === 0 ? (
-            <div className="drawer-empty">Aucun export pour l’instant. Tes clips exportés apparaîtront ici.</div>
+            <div className="drawer-empty">
+              {tr('No exports yet. Your exported clips will show up here.', 'Aucun export pour l’instant. Tes clips exportés apparaîtront ici.')}
+            </div>
           ) : (
             list.map((j) => <JobRow key={j.id} job={j} />)
           )}

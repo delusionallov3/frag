@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Check, FolderOpen, Loader2, PlugZap, ShieldCheck, X } from 'lucide-react'
 import type { ObsSettings, ObsTest } from '@shared/types'
+import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 
 const STOP_DELAYS = [0, 5, 10, 20]
@@ -11,7 +12,7 @@ function sameFolder(a: string | null | undefined, b: string | null | undefined):
   return !!a && !!b && norm(a) === norm(b)
 }
 
-/** Réglages : piloter OBS selon Valorant */
+/** Settings: drive OBS from Valorant's state */
 export function ObsSettingsSection(): JSX.Element | null {
   const { settings, updateSettings, autoRec } = useApp()
   const [host, setHost] = useState(settings?.obs.host ?? '127.0.0.1')
@@ -61,7 +62,7 @@ export function ObsSettingsSection(): JSX.Element | null {
 
   const live =
     autoRec?.enabled && autoRec.obs === 'ready'
-      ? `Connecté${autoRec.obsVersion ? ` (OBS WebSocket ${autoRec.obsVersion})` : ''}`
+      ? `${tr('Connected', 'Connecté')}${autoRec.obsVersion ? ` (OBS WebSocket ${autoRec.obsVersion})` : ''}`
       : autoRec?.enabled && autoRec.obsError
         ? autoRec.obsError
         : null
@@ -71,10 +72,12 @@ export function ObsSettingsSection(): JSX.Element | null {
       <div className="setting">
         <div className="setting-head">
           <div className="setting-label">
-            <strong>Enregistrement auto</strong>
+            <strong>{tr('Auto-record', 'Enregistrement auto')}</strong>
             <span>
-              OBS démarre quand ta game commence et s’arrête quand tu reviens au menu. La rec est ensuite liée toute
-              seule à son match.
+              {tr(
+                'OBS starts recording when your game begins and stops when you’re back in the menus. The recording is then linked to its match automatically.',
+                'OBS démarre quand ta game commence et s’arrête quand tu reviens au menu. La rec est ensuite liée toute seule à son match.'
+              )}
             </span>
           </div>
           <label className="toggle">
@@ -97,7 +100,7 @@ export function ObsSettingsSection(): JSX.Element | null {
 
             <div className="obs-addr">
               <div className="field">
-                <label>Adresse</label>
+                <label>{tr('Address', 'Adresse')}</label>
                 <input
                   className="input"
                   value={host}
@@ -123,8 +126,8 @@ export function ObsSettingsSection(): JSX.Element | null {
             {settings.hasObsPassword && (
               <div className="hk-stored">
                 <ShieldCheck size={14} />
-                <span>Mot de passe enregistré, chiffré sur ce PC</span>
-                <button className="icon-btn" title="Oublier le mot de passe" onClick={forget}>
+                <span>{tr('Password saved, encrypted on this PC', 'Mot de passe enregistré, chiffré sur ce PC')}</span>
+                <button className="icon-btn" title={tr('Forget password', 'Oublier le mot de passe')} onClick={forget}>
                   <X size={14} />
                 </button>
               </div>
@@ -139,12 +142,16 @@ export function ObsSettingsSection(): JSX.Element | null {
                   e.stopPropagation()
                   if (e.key === 'Enter') void runTest()
                 }}
-                placeholder={settings.hasObsPassword ? 'Remplacer le mot de passe…' : 'Mot de passe du serveur WebSocket'}
+                placeholder={
+                  settings.hasObsPassword
+                    ? tr('Replace password…', 'Remplacer le mot de passe…')
+                    : tr('WebSocket server password', 'Mot de passe du serveur WebSocket')
+                }
                 spellCheck={false}
               />
               <button className="btn btn-ghost btn-sm" onClick={runTest} disabled={busy}>
                 {busy ? <Loader2 size={13} className="spin" /> : <PlugZap size={13} />}
-                Tester la connexion
+                {tr('Test connection', 'Tester la connexion')}
               </button>
             </div>
 
@@ -158,8 +165,8 @@ export function ObsSettingsSection(): JSX.Element | null {
               <div className="hk-msg is-ok">
                 <Check size={13} />
                 <span>
-                  OBS {test.version} répond
-                  {test.recordDirectory ? ` · enregistre dans ${test.recordDirectory}` : ''}
+                  {tr(`OBS ${test.version} is responding`, `OBS ${test.version} répond`)}
+                  {test.recordDirectory ? ` · ${tr('records to', 'enregistre dans')} ${test.recordDirectory}` : ''}
                 </span>
               </div>
             )}
@@ -169,30 +176,32 @@ export function ObsSettingsSection(): JSX.Element | null {
                 onClick={() => void updateSettings({ recsFolder: test.recordDirectory! })}
               >
                 <FolderOpen size={13} />
-                Utiliser ce dossier pour les recs de Frag
+                {tr('Use this folder for Frag’s recordings', 'Utiliser ce dossier pour les recs de Frag')}
               </button>
             )}
 
             <p className="obs-help">
-              Dans OBS : Outils → Paramètres du serveur WebSocket → coche « Activer le serveur WebSocket ». Le mot de
-              passe se copie avec « Afficher les informations de connexion ».
+              {tr(
+                'In OBS: Tools → WebSocket Server Settings → tick “Enable WebSocket server”. Copy the password with “Show Connect Info”.',
+                'Dans OBS : Outils → Paramètres du serveur WebSocket → coche « Activer le serveur WebSocket ». Le mot de passe se copie avec « Afficher les informations de connexion ».'
+              )}
             </p>
 
             <div className="obs-grid">
-              <span>Démarrer</span>
+              <span>{tr('Start', 'Démarrer')}</span>
               <div className="segmented">
                 <button className={obs.startOn === 'ingame' ? 'is-on' : ''} onClick={() => void patch({ startOn: 'ingame' })}>
-                  Au chargement de la game
+                  {tr('When the game loads', 'Au chargement de la game')}
                 </button>
                 <button className={obs.startOn === 'pregame' ? 'is-on' : ''} onClick={() => void patch({ startOn: 'pregame' })}>
-                  Dès la sélection d’agent
+                  {tr('At agent select', 'Dès la sélection d’agent')}
                 </button>
               </div>
-              <span>Arrêter</span>
+              <span>{tr('Stop', 'Arrêter')}</span>
               <div className="segmented">
                 {STOP_DELAYS.map((d) => (
                   <button key={d} className={obs.stopDelay === d ? 'is-on' : ''} onClick={() => void patch({ stopDelay: d })}>
-                    {d === 0 ? 'Au retour au menu' : `${d} s après`}
+                    {d === 0 ? tr('Back in menus', 'Au retour au menu') : tr(`${d} s later`, `${d} s après`)}
                   </button>
                 ))}
               </div>
@@ -201,17 +210,19 @@ export function ObsSettingsSection(): JSX.Element | null {
             <label className="toggle">
               <input type="checkbox" checked={obs.autoLink} onChange={(e) => void patch({ autoLink: e.target.checked })} />
               <span />
-              Lier la rec à son match après la game{settings.hasHenrikKey ? '' : ' (il faut une clé HenrikDev)'}
+              {tr('Link the recording to its match after the game', 'Lier la rec à son match après la game')}
+              {settings.hasHenrikKey ? '' : tr(' (needs a HenrikDev key)', ' (il faut une clé HenrikDev)')}
             </label>
             <label className="toggle">
               <input type="checkbox" checked={obs.renameRecs} onChange={(e) => void patch({ renameRecs: e.target.checked })} />
               <span />
-              Renommer la rec à la fin (map · mode · score)
+              {tr('Rename the recording at the end (map · mode · score)', 'Renommer la rec à la fin (map · mode · score)')}
             </label>
             <p className="obs-help">
-              Pendant la game, Frag note chaque fin de round : ça pose des marqueurs dans la rec et la cale toute seule une
-              fois liée au match. Il ne touche pas à un enregistrement que tu as lancé toi-même, et ne filme pas le stand de
-              tir.
+              {tr(
+                'During the game, Frag notes the end of every round: it drops markers in the recording and syncs it on its own once linked to the match. It never touches a recording you started yourself, and skips the Range.',
+                'Pendant la game, Frag note chaque fin de round : ça pose des marqueurs dans la rec et la cale toute seule une fois liée au match. Il ne touche pas à un enregistrement que tu as lancé toi-même, et ne filme pas le stand de tir.'
+              )}
             </p>
           </div>
         )}
@@ -219,10 +230,12 @@ export function ObsSettingsSection(): JSX.Element | null {
 
       <div className="setting">
         <div className="setting-label">
-          <strong>Recs courtes</strong>
+          <strong>{tr('Short recordings', 'Recs courtes')}</strong>
           <span>
-            En dessous de cette durée, une rec n’est jamais liée toute seule à un match (recs de test). Tu peux toujours
-            la lier à la main, ou la masquer dans la bibliothèque.
+            {tr(
+              'Below this length, a recording is never linked to a match automatically (test recordings). You can still link it by hand, or hide it in the library.',
+              'En dessous de cette durée, une rec n’est jamais liée toute seule à un match (recs de test). Tu peux toujours la lier à la main, ou la masquer dans la bibliothèque.'
+            )}
           </span>
         </div>
         <div className="segmented">
@@ -232,7 +245,7 @@ export function ObsSettingsSection(): JSX.Element | null {
               className={settings.minLinkMinutes === m ? 'is-on' : ''}
               onClick={() => void updateSettings({ minLinkMinutes: m })}
             >
-              Moins de {m} min
+              {tr(`Under ${m} min`, `Moins de ${m} min`)}
             </button>
           ))}
         </div>

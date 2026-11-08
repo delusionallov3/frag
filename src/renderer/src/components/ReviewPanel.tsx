@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Play, Pause, Repeat } from 'lucide-react'
 import type { MatchLink, ReviewNote } from '@shared/types'
-import { REVIEW_LISTS, REVIEW_TAGS, type ReviewItem, type ReviewKind, type MatchInsights } from '../lib/review'
+import { tr } from '@shared/i18n'
+import { GOOD_TAG, REVIEW_TAGS, reviewLists, tagLabel, type ReviewItem, type ReviewKind, type MatchInsights } from '../lib/review'
+import { keyCap } from '../lib/keys'
 import { useLookup } from '../lib/assets'
 import VImg from './VImg'
 
@@ -67,16 +69,16 @@ function ItemRow({
             {REVIEW_TAGS.map((t) => (
               <button
                 key={t}
-                className={`rv-tag ${tags.includes(t) ? 'is-on' : ''} ${t === 'Bien joué' ? 'is-good' : ''}`}
+                className={`rv-tag ${tags.includes(t) ? 'is-on' : ''} ${t === GOOD_TAG ? 'is-good' : ''}`}
                 onClick={() => toggleTag(t)}
               >
-                {t}
+                {tagLabel(t)}
               </button>
             ))}
           </div>
           <textarea
             className="input rv-text"
-            placeholder="Ce que tu aurais dû faire"
+            placeholder={tr('What you should have done', 'Ce que tu aurais dû faire')}
             value={note?.note ?? ''}
             onChange={(e) => p.onNote(item.key, { tags, note: e.target.value })}
             onKeyDown={(e) => e.stopPropagation()}
@@ -93,10 +95,15 @@ export default function ReviewPanel(p: Props): JSX.Element {
     return (
       <div className="side-pane">
         <div className="clip-empty">
-          <strong>Lie d’abord cette rec à son match</strong>
-          <p>Le mode Revoir utilise les kills et les rounds du match pour te montrer tes morts et tes erreurs.</p>
+          <strong>{tr('Link this recording to its match first', 'Lie d’abord cette rec à son match')}</strong>
+          <p>
+            {tr(
+              'Review mode uses the match’s kills and rounds to show you your deaths and mistakes.',
+              'Le mode Revoir utilise les kills et les rounds du match pour te montrer tes morts et tes erreurs.'
+            )}
+          </p>
           <button className="btn btn-ghost btn-sm" onClick={p.onGoMatch}>
-            Aller à l’onglet Match
+            {tr('Go to the Match tab', 'Aller à l’onglet Match')}
           </button>
         </div>
       </div>
@@ -106,7 +113,8 @@ export default function ReviewPanel(p: Props): JSX.Element {
   const counts = new Map<ReviewKind, number>()
   for (const it of p.data.items) counts.set(it.kind, (counts.get(it.kind) ?? 0) + 1)
   const list = p.data.items.filter((it) => it.kind === p.kind)
-  const current = REVIEW_LISTS.find((l) => l.kind === p.kind)!
+  const lists = reviewLists()
+  const current = lists.find((l) => l.kind === p.kind)!
   const d = p.data
 
   return (
@@ -118,14 +126,14 @@ export default function ReviewPanel(p: Props): JSX.Element {
             <i>/</i>
             {d.firstDeaths}
           </b>
-          <span>First bloods / premières morts</span>
+          <span>{tr('First bloods / first deaths', 'First bloods / premières morts')}</span>
         </div>
         <div>
           <b>
             {d.deaths ? Math.round((d.untradedDeaths / d.deaths) * 100) : 0}
             <i>%</i>
           </b>
-          <span>Morts non tradées</span>
+          <span>{tr('Untraded deaths', 'Morts non tradées')}</span>
         </div>
         <div>
           <b>
@@ -133,12 +141,12 @@ export default function ReviewPanel(p: Props): JSX.Element {
             <i>/</i>
             {d.clutchesWon + d.clutchesLost}
           </b>
-          <span>Clutchs gagnés</span>
+          <span>{tr('Clutches won', 'Clutchs gagnés')}</span>
         </div>
       </div>
 
       <div className="rv-lists">
-        {REVIEW_LISTS.map((l) => (
+        {lists.map((l) => (
           <button key={l.kind} className={`rv-list ${p.kind === l.kind ? 'is-on' : ''}`} onClick={() => p.onKind(l.kind)}>
             {l.label}
             <span>{counts.get(l.kind) ?? 0}</span>
@@ -148,7 +156,7 @@ export default function ReviewPanel(p: Props): JSX.Element {
       <p className="rv-hint">{current.hint}</p>
 
       <div className="rv-controls">
-        <button className="icon-btn" title="Précédent (,)" onClick={() => p.onPlay(Math.max(0, p.index - 1))} disabled={!list.length}>
+        <button className="icon-btn" title={`${tr('Previous', 'Précédent')} (,)`} onClick={() => p.onPlay(Math.max(0, p.index - 1))} disabled={!list.length}>
           <ChevronLeft />
         </button>
         <button className="btn btn-ghost btn-sm rv-play" onClick={p.onTogglePlay} disabled={!list.length}>
@@ -157,7 +165,7 @@ export default function ReviewPanel(p: Props): JSX.Element {
         </button>
         <button
           className="icon-btn"
-          title="Suivant (.)"
+          title={`${tr('Next', 'Suivant')} (${keyCap('.')})`}
           onClick={() => p.onPlay(Math.min(list.length - 1, p.index + 1))}
           disabled={!list.length}
         >
@@ -166,16 +174,16 @@ export default function ReviewPanel(p: Props): JSX.Element {
         <button
           className={`chip-btn rv-auto ${p.auto ? 'is-on' : ''}`}
           onClick={() => p.onAuto(!p.auto)}
-          title="Passer tout seul au suivant à la fin de chaque passage"
+          title={tr('Move on to the next one automatically when each one ends', 'Passer tout seul au suivant à la fin de chaque passage')}
         >
           <Repeat />
-          Enchaîner
+          {tr('Autoplay', 'Enchaîner')}
         </button>
       </div>
 
       <div className="rv-items">
         {list.length === 0 ? (
-          <div className="rv-empty">Rien dans cette liste pour la partie enregistrée.</div>
+          <div className="rv-empty">{tr('Nothing in this list for the recorded part of the game.', 'Rien dans cette liste pour la partie enregistrée.')}</div>
         ) : (
           list.map((it, i) => (
             <ItemRow key={`${it.kind}-${it.key}`} item={it} i={i} active={i === p.index} note={p.notes[it.key]} p={p} />

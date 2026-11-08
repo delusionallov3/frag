@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, X, Loader2, ExternalLink, ShieldCheck, AlertTriangle, RefreshCw, Star, UserPlus } from 'lucide-react'
 import type { KeyTest, RateInfo, RiotAccount } from '@shared/types'
+import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { assetUrl } from '../lib/assets'
 
@@ -13,15 +14,15 @@ const REGION_LABEL: Record<string, string> = {
   br: 'BR'
 }
 
-const PRESETS: { value: number; label: string; hint: string }[] = [
-  { value: 30, label: '30', hint: 'Clé Basic (gratuite)' },
-  { value: 90, label: '90', hint: 'Clé Advanced (gratuite, sur demande)' },
+const presets = (): { value: number; label: string; hint: string }[] => [
+  { value: 30, label: '30', hint: tr('Basic key (free)', 'Clé Basic (gratuite)') },
+  { value: 90, label: '90', hint: tr('Advanced key (free, on request)', 'Clé Advanced (gratuite, sur demande)') },
   { value: 130, label: '130', hint: 'Premium Tier 1' },
   { value: 200, label: '200', hint: 'Premium Tier 2' },
   { value: 300, label: '300', hint: 'Premium Tier 3' }
 ]
 
-/* ------------------------------------------------------------------ Clé API */
+/* ------------------------------------------------------------------ API key */
 
 export function KeyField({ compact = false }: { compact?: boolean }): JSX.Element | null {
   const { settings } = useApp()
@@ -41,7 +42,7 @@ export function KeyField({ compact = false }: { compact?: boolean }): JSX.Elemen
     if (res.ok) {
       setResult(res.test)
       setKey('')
-    } else setError(res.error ?? 'Clé refusée.')
+    } else setError(res.error ?? tr('Key rejected.', 'Clé refusée.'))
   }
 
   const testStored = async (): Promise<void> => {
@@ -51,7 +52,7 @@ export function KeyField({ compact = false }: { compact?: boolean }): JSX.Elemen
     const t = await window.frag.testStoredKey()
     setBusy(false)
     if (t.ok) setResult(t)
-    else setError(t.error ?? 'Clé refusée.')
+    else setError(t.error ?? tr('Key rejected.', 'Clé refusée.'))
   }
 
   const remove = async (): Promise<void> => {
@@ -64,21 +65,21 @@ export function KeyField({ compact = false }: { compact?: boolean }): JSX.Elemen
   return (
     <div className="hk">
       <div className="hk-label">
-        <span>Clé API HenrikDev</span>
+        <span>{tr('HenrikDev API key', 'Clé API HenrikDev')}</span>
         <button className="link-btn inline-link" onClick={() => window.frag.openExternal('https://api.henrikdev.xyz/dashboard/')}>
-          Obtenir une clé <ExternalLink size={10} />
+          {tr('Get a key', 'Obtenir une clé')} <ExternalLink size={10} />
         </button>
       </div>
 
       {settings.hasHenrikKey && !compact && (
         <div className="hk-stored">
           <ShieldCheck size={14} />
-          <span>Clé enregistrée, chiffrée sur ce PC</span>
+          <span>{tr('Key saved, encrypted on this PC', 'Clé enregistrée, chiffrée sur ce PC')}</span>
           <button className="btn btn-ghost btn-sm" onClick={testStored} disabled={busy}>
             {busy ? <Loader2 size={13} className="spin" /> : <RefreshCw size={13} />}
-            Tester
+            {tr('Test', 'Tester')}
           </button>
-          <button className="icon-btn" title="Supprimer la clé" onClick={remove}>
+          <button className="icon-btn" title={tr('Remove key', 'Supprimer la clé')} onClick={remove}>
             <X size={14} />
           </button>
         </div>
@@ -94,12 +95,12 @@ export function KeyField({ compact = false }: { compact?: boolean }): JSX.Elemen
             e.stopPropagation()
             if (e.key === 'Enter' && key.trim()) void save()
           }}
-          placeholder={settings.hasHenrikKey ? 'Remplacer par une autre clé…' : 'HDEV-xxxxxxxx-xxxx-…'}
+          placeholder={settings.hasHenrikKey ? tr('Replace with another key…', 'Remplacer par une autre clé…') : 'HDEV-xxxxxxxx-xxxx-…'}
           spellCheck={false}
         />
         <button className={`btn ${compact ? 'btn-primary' : 'btn-ghost'} btn-sm`} disabled={!key.trim() || busy} onClick={save}>
           {busy && key ? <Loader2 size={13} className="spin" /> : <Check size={13} />}
-          Tester et enregistrer
+          {tr('Test and save', 'Tester et enregistrer')}
         </button>
       </div>
 
@@ -113,9 +114,11 @@ export function KeyField({ compact = false }: { compact?: boolean }): JSX.Elemen
         <div className="hk-msg is-ok">
           <Check size={13} />
           <span>
-            Clé valide
-            {result.limit ? ` · quota détecté : ${result.limit} requêtes par fenêtre` : ''}
-            {result.remaining !== null ? ` · ${result.remaining} restantes` : ''}
+            {tr('Valid key', 'Clé valide')}
+            {result.limit
+              ? tr(` · detected quota: ${result.limit} requests per window`, ` · quota détecté : ${result.limit} requêtes par fenêtre`)
+              : ''}
+            {result.remaining !== null ? tr(` · ${result.remaining} left`, ` · ${result.remaining} restantes`) : ''}
           </span>
         </div>
       )}
@@ -127,6 +130,7 @@ export function KeyField({ compact = false }: { compact?: boolean }): JSX.Elemen
 
 export function RateField(): JSX.Element | null {
   const { settings, updateSettings } = useApp()
+  const PRESETS = presets()
   const [info, setInfo] = useState<RateInfo | null>(null)
   const [custom, setCustom] = useState('')
 
@@ -151,8 +155,12 @@ export function RateField(): JSX.Element | null {
   return (
     <div className="hk">
       <div className="hk-label">
-        <span>Requêtes par minute autorisées</span>
-        {info?.detectedLimit ? <span className="hk-detected">Détecté sur ta clé : {info.detectedLimit}</span> : null}
+        <span>{tr('Allowed requests per minute', 'Requêtes par minute autorisées')}</span>
+        {info?.detectedLimit ? (
+          <span className="hk-detected">
+            {tr('Detected on your key:', 'Détecté sur ta clé :')} {info.detectedLimit}
+          </span>
+        ) : null}
       </div>
       <div className="row gap-6 hk-rate">
         <div className="segmented">
@@ -172,7 +180,7 @@ export function RateField(): JSX.Element | null {
           type="number"
           min={1}
           max={1000}
-          placeholder="Autre"
+          placeholder={tr('Other', 'Autre')}
           value={!isPreset ? settings.rateLimit : custom}
           onChange={(e) => {
             setCustom(e.target.value)
@@ -187,18 +195,21 @@ export function RateField(): JSX.Element | null {
           <div style={{ width: `${pct}%` }} className={pct >= 100 ? 'is-full' : ''} />
         </div>
         <span>
-          {used} / {settings.rateLimit} sur la dernière minute
-          {info?.waitingUntil ? ' · en attente du quota…' : ''}
+          {used} / {settings.rateLimit} {tr('in the last minute', 'sur la dernière minute')}
+          {info?.waitingUntil ? tr(' · waiting for quota…', ' · en attente du quota…') : ''}
         </span>
       </div>
       <p className="hk-note">
-        Frag ne dépasse jamais ce nombre : les requêtes en trop attendent leur tour. Clé Basic gratuite = 30, Advanced = 90.
+        {tr(
+          'Frag never goes over this number: extra requests wait their turn. Free Basic key = 30, Advanced = 90.',
+          'Frag ne dépasse jamais ce nombre : les requêtes en trop attendent leur tour. Clé Basic gratuite = 30, Advanced = 90.'
+        )}
       </p>
     </div>
   )
 }
 
-/* ------------------------------------------------------------------ Comptes Riot vérifiés */
+/* ------------------------------------------------------------------ Verified Riot accounts */
 
 function Avatar({ card }: { card: string | null }): JSX.Element {
   const [failed, setFailed] = useState(false)
@@ -223,7 +234,7 @@ export function AccountsField({ compact = false }: { compact?: boolean }): JSX.E
   const accounts = settings.accounts
   const valid = /^[^#]{3,16}#[^#]{2,5}$/.test(input.trim())
 
-  /** Remplace le compte s'il existe déjà (même PUUID ou même Riot ID), sinon l'ajoute à la fin */
+  /** Replaces the account if it already exists (same PUUID or Riot ID), otherwise appends it */
   const upsert = (acc: RiotAccount): RiotAccount[] => {
     const idx = accounts.findIndex(
       (a) => (acc.puuid && a.puuid === acc.puuid) || a.riotId.toLowerCase() === acc.riotId.toLowerCase()
@@ -263,8 +274,10 @@ export function AccountsField({ compact = false }: { compact?: boolean }): JSX.E
   return (
     <div className="hk">
       <div className="hk-label">
-        <span>{compact ? 'Ton compte Riot' : 'Comptes Riot'}</span>
-        {!compact && accounts.length > 1 && <span className="hk-detected">L’étoile = compte par défaut</span>}
+        <span>{compact ? tr('Your Riot account', 'Ton compte Riot') : tr('Riot accounts', 'Comptes Riot')}</span>
+        {!compact && accounts.length > 1 && (
+          <span className="hk-detected">{tr('Star = default account', 'L’étoile = compte par défaut')}</span>
+        )}
       </div>
 
       {accounts.length > 0 && (
@@ -278,34 +291,34 @@ export function AccountsField({ compact = false }: { compact?: boolean }): JSX.E
                   {a.verified ? (
                     <>
                       <span className="acc-ok">
-                        <Check size={11} /> vérifié
+                        <Check size={11} /> {tr('verified', 'vérifié')}
                       </span>
                       <span>{REGION_LABEL[a.region] ?? a.region}</span>
-                      {a.level !== null && <span>niv. {a.level}</span>}
+                      {a.level !== null && <span>{tr('lvl', 'niv.')} {a.level}</span>}
                     </>
                   ) : (
-                    <span className="acc-warn">non vérifié</span>
+                    <span className="acc-warn">{tr('not verified', 'non vérifié')}</span>
                   )}
                 </div>
               </div>
               {!a.verified && (
                 <button className="btn btn-ghost btn-sm" disabled={noKey || busy !== null} onClick={() => reverify(a)}>
                   {busy === a.riotId ? <Loader2 size={13} className="spin" /> : null}
-                  Vérifier
+                  {tr('Verify', 'Vérifier')}
                 </button>
               )}
               {!compact && (
                 <>
                   <button
                     className={`icon-btn ${i === 0 ? 'is-star' : ''}`}
-                    title={i === 0 ? 'Compte par défaut' : 'Utiliser par défaut'}
+                    title={i === 0 ? tr('Default account', 'Compte par défaut') : tr('Make default', 'Utiliser par défaut')}
                     onClick={() => updateSettings({ accounts: [a, ...accounts.filter((x) => x !== a)] })}
                   >
                     <Star size={13} fill={i === 0 ? 'currentColor' : 'none'} />
                   </button>
                   <button
                     className="icon-btn"
-                    title="Retirer"
+                    title={tr('Remove', 'Retirer')}
                     onClick={() => updateSettings({ accounts: accounts.filter((x) => x !== a) })}
                   >
                     <X size={13} />
@@ -330,18 +343,26 @@ export function AccountsField({ compact = false }: { compact?: boolean }): JSX.E
               e.stopPropagation()
               if (e.key === 'Enter') void add()
             }}
-            placeholder="Pseudo#TAG"
+            placeholder={tr('Name#TAG', 'Pseudo#TAG')}
             spellCheck={false}
             disabled={noKey}
           />
           <button className="btn btn-ghost btn-sm" disabled={!valid || busy !== null || noKey} onClick={add}>
             {busy === 'add' ? <Loader2 size={13} className="spin" /> : <UserPlus size={13} />}
-            Vérifier et ajouter
+            {tr('Verify and add', 'Vérifier et ajouter')}
           </button>
         </div>
       )}
-      {noKey && <p className="hk-note">Enregistre d’abord une clé valide pour vérifier tes comptes.</p>}
-      {input && !valid && !noKey && <p className="hk-note">Format attendu : Pseudo#TAG (3 à 16 caractères, puis 2 à 5).</p>}
+      {noKey && (
+        <p className="hk-note">
+          {tr('Save a valid key first to verify your accounts.', 'Enregistre d’abord une clé valide pour vérifier tes comptes.')}
+        </p>
+      )}
+      {input && !valid && !noKey && (
+        <p className="hk-note">
+          {tr('Expected format: Name#TAG (3 to 16 characters, then 2 to 5).', 'Format attendu : Pseudo#TAG (3 à 16 caractères, puis 2 à 5).')}
+        </p>
+      )}
       {error && (
         <div className="hk-msg is-err">
           <AlertTriangle size={13} />

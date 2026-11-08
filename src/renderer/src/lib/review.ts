@@ -1,19 +1,31 @@
 import type { MatchKill, MatchLink, MatchPlayer } from '@shared/types'
+import { tr } from '@shared/i18n'
 import { myTeam, toVideo } from './match'
 
-/* ------------------------------------------------------------------ Playlists du mode Revoir */
+/* ------------------------------------------------------------------ Review mode playlists */
 
 export type ReviewKind = 'death' | 'entry' | 'untraded' | 'clutchLost' | 'lostAfterFB'
 
-export const REVIEW_LISTS: { kind: ReviewKind; label: string; hint: string }[] = [
-  { kind: 'death', label: 'Mes morts', hint: 'Chaque mort, de 6 s avant à 2 s après' },
-  { kind: 'entry', label: 'Premières morts', hint: 'Tu es le premier mort du round' },
-  { kind: 'untraded', label: 'Non tradées', hint: 'Personne n’a tué ton tueur dans les 3 s' },
-  { kind: 'clutchLost', label: 'Clutchs ratés', hint: 'Seul en vie face à au moins un ennemi, round perdu' },
-  { kind: 'lostAfterFB', label: 'Avantage perdu', hint: 'Ton équipe a fait le first blood mais a perdu le round' }
+export const reviewLists = (): { kind: ReviewKind; label: string; hint: string }[] => [
+  { kind: 'death', label: tr('My deaths', 'Mes morts'), hint: tr('Every death, from 6 s before to 2 s after', 'Chaque mort, de 6 s avant à 2 s après') },
+  { kind: 'entry', label: tr('First deaths', 'Premières morts'), hint: tr('You’re the first one down in the round', 'Tu es le premier mort du round') },
+  { kind: 'untraded', label: tr('Untraded', 'Non tradées'), hint: tr('Nobody killed your killer within 3 s', 'Personne n’a tué ton tueur dans les 3 s') },
+  {
+    kind: 'clutchLost',
+    label: tr('Lost clutches', 'Clutchs ratés'),
+    hint: tr('Last one alive against at least one enemy, round lost', 'Seul en vie face à au moins un ennemi, round perdu')
+  },
+  {
+    kind: 'lostAfterFB',
+    label: tr('Thrown advantage', 'Avantage perdu'),
+    hint: tr('Your team got first blood but lost the round', 'Ton équipe a fait le first blood mais a perdu le round')
+  }
 ]
 
-/** Tags rapides pour noter ses erreurs (et ce qui marche) */
+/**
+ * Quick tags to note mistakes (and what works).
+ * The French text is the value saved in projects, so it must never change: use tagLabel() to display it.
+ */
 export const REVIEW_TAGS = [
   'Peek seul',
   'Mauvais placement',
@@ -26,19 +38,37 @@ export const REVIEW_TAGS = [
   'Bien joué'
 ]
 
+const TAG_EN: Record<string, string> = {
+  'Peek seul': 'Dry peek',
+  'Mauvais placement': 'Bad positioning',
+  'Pas d’utilitaire': 'No utility',
+  Visée: 'Aim',
+  'Info ignorée': 'Ignored info',
+  Rotation: 'Rotation',
+  'Trop agressif': 'Too aggressive',
+  'Trop passif': 'Too passive',
+  'Bien joué': 'Well played'
+}
+
+export const GOOD_TAG = 'Bien joué'
+
+export function tagLabel(tag: string): string {
+  return tr(TAG_EN[tag] ?? tag, tag)
+}
+
 export interface ReviewItem {
   key: string
   kind: ReviewKind
   round: number
-  /** fenêtre à lire (temps vidéo) */
+  /** window to play (video time) */
   start: number
   end: number
-  /** instant clé (la mort, le moment où tu te retrouves seul…) */
+  /** key moment (the death, the moment you end up alone…) */
   focus: number
   killIndex?: number
   title: string
   sub: string
-  /** l'adversaire en cause (tueur), pour l'icône */
+  /** the opponent involved (killer), for the icon */
   other?: MatchPlayer
   weapon?: string | null
   weaponId?: string | null
@@ -46,7 +76,7 @@ export interface ReviewItem {
 
 const TRADE_WINDOW = 3
 
-/** Analyse « progression » d'un match : sert au mode Revoir et à la page Stats */
+/** "Improvement" analysis of a match: used by Review mode and the Stats page */
 export interface MatchInsights {
   rounds: number
   firstBloods: number
@@ -88,7 +118,7 @@ export function insights(link: MatchLink, duration = Infinity): MatchInsights {
     if (first.killer === puuid && first.victim !== puuid) firstBloods++
     if (first.victim === puuid) firstDeaths++
 
-    // Trades : je tue quelqu'un qui vient de tuer un coéquipier
+    // Trades: I kill someone who just killed a teammate
     for (const k of kills) {
       if (k.killer !== puuid || k.victimTeam === team) continue
       const avenged = kills.some(
@@ -97,7 +127,7 @@ export function insights(link: MatchLink, duration = Infinity): MatchInsights {
       if (avenged) trades++
     }
 
-    // Mes morts
+    // My deaths
     for (const k of kills) {
       if (k.victim !== puuid) continue
       deaths++
@@ -115,7 +145,7 @@ export function insights(link: MatchLink, duration = Infinity): MatchInsights {
         focus: t,
         killIndex,
         title: `R${ri + 1} · ${k.tRound.toFixed(0)} s`,
-        sub: `Tué par ${killer?.name ?? '?'}${killer ? ` (${killer.agent})` : ''}`,
+        sub: `${tr('Killed by', 'Tué par')} ${killer?.name ?? '?'}${killer ? ` (${killer.agent})` : ''}`,
         other: killer,
         weapon: k.weapon,
         weaponId: k.weaponId
@@ -127,7 +157,7 @@ export function insights(link: MatchLink, duration = Infinity): MatchInsights {
       }
     }
 
-    // Clutch : je reste seul face à au moins un ennemi
+    // Clutch: I'm the last one alive against at least one enemy
     if (team) {
       const alive = new Map<string, Set<string>>()
       for (const p of match.players) {
@@ -162,14 +192,14 @@ export function insights(link: MatchLink, duration = Infinity): MatchInsights {
               end: v(roundEnd),
               focus: s,
               title: `R${ri + 1} · 1v${vs}`,
-              sub: 'Clutch perdu'
+              sub: tr('Clutch lost', 'Clutch perdu')
             })
           }
         }
       }
     }
 
-    // First blood pour nous, mais round perdu
+    // First blood for us, but round lost
     if (fbForUs && won === false) {
       lostAfterFB++
       const s = v(first.tMatch)
@@ -181,8 +211,11 @@ export function insights(link: MatchLink, duration = Infinity): MatchInsights {
           start: Math.max(0, s - 3),
           end: v(roundEnd),
           focus: s,
-          title: `R${ri + 1} · avantage 5v4`,
-          sub: `First blood de ${byId.get(first.killer)?.name ?? '?'}, round perdu`
+          title: `R${ri + 1} · ${tr('5v4 advantage', 'avantage 5v4')}`,
+          sub: tr(
+            `First blood by ${byId.get(first.killer)?.name ?? '?'}, round lost`,
+            `First blood de ${byId.get(first.killer)?.name ?? '?'}, round perdu`
+          )
         })
       }
     }

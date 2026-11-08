@@ -1,6 +1,6 @@
 import type { MatchData, RecRound } from './types'
 
-/** Durée du spike une fois posé (s) */
+/** Spike timer once planted (s) */
 const SPIKE_TIMER = 45
 
 const median = (xs: number[]): number => {
@@ -10,8 +10,8 @@ const median = (xs: number[]): number => {
 }
 
 /**
- * Instant (temps de match, s) où chaque round se termine, quand on peut le savoir :
- * dernier kill pour une élimination, defuse, ou explosion du spike. null sinon.
+ * Time (match time, s) when each round ends, when it can be known:
+ * last kill for an elimination, defuse, or spike detonation. null otherwise.
  */
 export function roundEnds(match: MatchData): (number | null)[] {
   return match.rounds.map((r) => {
@@ -29,16 +29,16 @@ export function roundEnds(match: MatchData): (number | null)[] {
 export interface ScoreSync {
   matchTime: number
   videoTime: number
-  /** nombre de rounds qui ont servi */
+  /** number of rounds used */
   rounds: number
-  /** écart typique entre rounds (s) */
+  /** typical spread between rounds (s) */
   spread: number
 }
 
 /**
- * Calage à partir des fins de round vues pendant la game (score du client Riot).
- * Renvoie null si pas assez de rounds, si les vainqueurs ne collent pas (mauvais match)
- * ou si les écarts sont trop dispersés.
+ * Sync from the round ends seen during the game (score from the Riot client).
+ * Returns null if there aren't enough rounds, if the winners don't line up (wrong match)
+ * or if the offsets are too scattered.
  */
 export function scoreSync(match: MatchData, puuid: string, recRounds: RecRound[] | undefined): ScoreSync | null {
   if (!recRounds?.length) return null
@@ -62,7 +62,7 @@ export function scoreSync(match: MatchData, puuid: string, recRounds: RecRound[]
     const end = ends[rr.round]
     if (end !== null && end !== undefined) pairs.push({ end, t: rr.t })
   }
-  // vainqueurs des rounds incohérents : ce n'est pas la bonne game
+  // round winners don't line up: it's not the right game
   if (disagree > Math.max(1, (agree + disagree) * 0.2)) return null
   if (pairs.length < 3) return null
   const diffs = pairs.map((p) => p.end - p.t)

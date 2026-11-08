@@ -2,6 +2,7 @@ import { promises as fs, existsSync } from 'fs'
 import { basename, dirname, extname, join } from 'path'
 import type { AutoRecStatus, GameState, MatchData, ObsTest, RecRound, RiotAccount } from '@shared/types'
 import { autoLinkVerdict } from '@shared/link'
+import { tr } from '@shared/i18n'
 import { scoreSync } from '@shared/scoreSync'
 import { ObsClient, ObsError } from './obs'
 import { gameInfo, type GameInfo } from './riot'
@@ -10,9 +11,9 @@ import { getAssets } from './valapi'
 import { getObsPassword, getProject, getSettings, saveProject, setRecMeta } from './store'
 
 /**
- * Pilotage d'OBS selon l'état de Valorant :
- * game qui commence → OBS enregistre ; retour aux menus → OBS s'arrête quelques secondes après ;
- * puis Frag lie la rec à son match dès que HenrikDev le connaît.
+ * Drives OBS from Valorant's state:
+ * game starts → OBS records; back to the menus → OBS stops a few seconds later;
+ * then Frag links the recording to its match as soon as HenrikDev knows about it.
  */
 
 const TICK = 1000
@@ -35,7 +36,7 @@ let notify: (s: AutoRecStatus) => void = () => {}
 let onLinked: (path: string) => void = () => {}
 let onFiles: () => void = () => {}
 
-/* Pendant l'enregistrement : fins de round (score du client Riot) et infos de la game */
+/* While recording: round ends (score from the Riot client) and game info */
 let recRounds: RecRound[] = []
 let lastScore: { ally: number; enemy: number } | null = null
 let lastGame: GameInfo | null = null
@@ -45,9 +46,9 @@ let ticking = false
 let connecting = false
 let nextConnect = 0
 let stopTimer: NodeJS.Timeout | null = null
-/** une game a commencé pendant qu'OBS n'était pas joignable : on lance dès qu'il répond */
+/** a game started while OBS was unreachable: start as soon as it answers */
 let pendingStart = false
-/** nombre de relevés consécutifs hors game (évite d'arrêter sur un raté du client Riot) */
+/** consecutive out-of-game readings (avoids stopping on a Riot client hiccup) */
 let outOfGame = 0
 
 function set(patch: Partial<AutoRecStatus>): void {
@@ -109,7 +110,7 @@ async function connect(): Promise<void> {
   } catch (e) {
     const err = e instanceof ObsError ? e : new ObsError(String(e))
     set({ obs: err.kind === 'auth' ? 'auth' : 'error', obsError: err.message })
-    // mot de passe faux : inutile d'insister toutes les 2 s
+    // wrong password: no point retrying every 2 s
     nextConnect = Date.now() + (err.kind === 'auth' ? 30000 : 5000)
   } finally {
     connecting = false
@@ -120,21 +121,22 @@ async function startRecording(): Promise<void> {
   pendingStart = false
   if (!client.ready) {
     pendingStart = true
-    set({ last: 'Game lancée, mais OBS n’est pas joignable' })
+    set({ last: tr('Game started, but OBS can’t be reached', 'Game lancée, mais OBS n’est pas joignable') })
     return
   }
   try {
     const rec = await client.request<{ outputActive: boolean }>('GetRecordStatus')
     if (rec.outputActive) {
-      // déjà en train d'enregistrer (lancé à la main) : on n'y touche pas
-      set({ last: 'OBS enregistrait déjà, Frag n’y touche pas' })
+      // already recording (started by hand): leave it alone
+      set({ last: tr('OBS was already recording, Frag leaves it alone', 'OBS enregistrait déjà, Frag n’y touche pas') })
       return
     }
     set({ ownRecording: true })
     await client.request('StartRecord')
-    set({ last: 'Rec lancée' })
+    set({ last: tr('Recording started', 'Rec lancée') })
   } catch (e) {
-    set({ ownRecording: false, last: `Impossible de lancer la rec : ${e instanceof Error ? e.message : e}` })
+    const msg = e instanceof Error ? e.message : String(e)
+    set({ ownRecording: false, last: tr(`Couldn’t start recording: ${msg}`, `Impossible de lancer la rec : ${msg}`) })
   }
 }
 
@@ -144,9 +146,10 @@ async function stopRecording(): Promise<void> {
   if (!status.ownRecording || !client.ready) return
   try {
     await client.request('StopRecord')
-    set({ last: 'Rec arrêtée' })
+    set({ last: tr('Recording stopped', 'Rec arrêtée') })
   } catch (e) {
-    set({ last: `Impossible d’arrêter la rec : ${e instanceof Error ? e.message : e}` })
+    const msg = e instanceof Error ? e.message : String(e)
+    set({ last: tr(`Couldn’t stop recording: ${msg}`, `Impossible d’arrêter la rec : ${msg}`) })
   }
 }
 
@@ -156,7 +159,7 @@ function cancelStop(): void {
   if (status.stopAt) set({ stopAt: null })
 }
 
-/* ------------------------------------------------------------------ Boucle */
+/* ------------------------------------------------------------------ Loop */
 
 async function tick(): Promise<void> {
   if (ticking) return
@@ -190,14 +193,14 @@ async function tick(): Promise<void> {
       if (!was) await startRecording()
     } else if (was) {
       outOfGame++
-      // trois relevés de suite hors game avant de conclure que la game est finie
+      // three out-of-game readings in a row before deciding the game is over
       if (outOfGame < 3) return
       outOfGame = 0
       pendingStart = false
       set({ game: state })
       if (status.ownRecording && !stopTimer) {
         const delay = Math.max(0, s.obs.stopDelay) * 1000
-        set({ stopAt: Date.now() + delay, last: 'Game finie' })
+        set({ stopAt: Date.now() + delay, last: tr('Game over', 'Game finie') })
         stopTimer = setTimeout(() => void stopRecording(), delay)
       }
     } else if (state !== status.game) {
@@ -210,7 +213,7 @@ async function tick(): Promise<void> {
   }
 }
 
-/** Le score bouge d'un round : on note l'instant dans la rec */
+/** The score moved by one round: note the moment in the recording */
 function trackScore(info: GameInfo): void {
   lastGame = info
   if (!info.score || !status.recStartedAt) return
@@ -223,7 +226,7 @@ function trackScore(info: GameInfo): void {
   if (total !== prev.ally + prev.enemy + 1) return
   recRounds.push({
     round: total - 1,
-    // relevé toutes les secondes : on vise le milieu de l'intervalle
+    // read every second: aim for the middle of the interval
     t: Math.max(0, (Date.now() - status.recStartedAt) / 1000 - 0.5),
     ally: info.score.ally,
     enemy: info.score.enemy,
@@ -244,7 +247,7 @@ export function startAutoRec(
   void tick()
 }
 
-/** Réglages OBS modifiés : on se reconnecte avec les nouveaux paramètres */
+/** OBS settings changed: reconnect with the new values */
 export function resetObs(): void {
   client.close()
   nextConnect = 0
@@ -252,7 +255,7 @@ export function resetObs(): void {
   void tick()
 }
 
-/** Test d'une connexion (réglages), sans toucher à la connexion en cours */
+/** Test a connection (settings) without touching the current one */
 export async function testObs(host: string, port: number, password: string | null): Promise<ObsTest> {
   const probe = new ObsClient()
   try {
@@ -270,7 +273,7 @@ export async function testObs(host: string, port: number, password: string | nul
   }
 }
 
-/* ------------------------------------------------------------------ Après la game : liaison au match */
+/* ------------------------------------------------------------------ After the game: link to the match */
 
 const LINK_DELAYS = (process.env.FRAG_AUTOLINK_DELAYS ?? '60,180,420,900').split(',').map((n) => Number(n) * 1000)
 
@@ -288,7 +291,7 @@ const QUEUES: Record<string, string> = {
   snowball: 'Snowball Fight'
 }
 
-/** Noms de code des maps (fin du chemin interne) si valorant-api.com n'est pas joignable */
+/** Map code names (end of the internal path) in case valorant-api.com can't be reached */
 const MAP_CODES: Record<string, string> = {
   ascent: 'Ascent',
   duality: 'Bind',
@@ -323,7 +326,7 @@ function stampOf(path: string, start: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`
 }
 
-/** « 2026-11-07 16-47-31 · Ascent · Swiftplay · 5-3.mp4 » ; garde l'ancien nom si impossible */
+/** "2026-11-07 16-47-31 · Ascent · Swiftplay · 5-3.mp4"; keeps the old name if renaming fails */
 async function renameAfterGame(path: string, start: number, game: GameInfo, rounds: RecRound[]): Promise<string> {
   const map = await mapName(game.map)
   if (!map) return path
@@ -336,7 +339,7 @@ async function renameAfterGame(path: string, start: number, game: GameInfo, roun
   let target = join(dirname(path), base + ext)
   for (let i = 2; existsSync(target) && target !== path; i++) target = join(dirname(path), `${base} (${i})${ext}`)
   if (target === path) return path
-  // OBS peut garder le fichier quelques instants : on réessaie pendant ~20 s
+  // OBS may hold the file for a moment: retry for ~20 s
   for (let attempt = 0; attempt < 40; attempt++) {
     try {
       await fs.rename(path, target)
@@ -354,19 +357,19 @@ async function finished(path: string, start: number, own: boolean, rounds: RecRo
   const s = await getSettings()
   const final = own && s.obs.renameRecs && game ? await renameAfterGame(path, start, game, rounds) : path
   await setRecMeta({ path: final, start, end: Date.now(), by: own ? 'frag' : 'obs', rounds }).catch(() => {})
-  // Un marqueur à chaque fin de round, posé pendant la game
+  // A marker at every round end, noted during the game
   if (rounds.length) {
     const project = await getProject(final)
     const markers = [
       ...project.markers,
-      ...rounds.map((r) => ({ id: `round-${r.round}`, time: r.t, label: `Fin du round ${r.round + 1} · ${r.ally}-${r.enemy}` }))
+      ...rounds.map((r) => ({ id: `round-${r.round}`, time: r.t, label: `${tr('End of round', 'Fin du round')} ${r.round + 1} · ${r.ally}-${r.enemy}` }))
     ]
     await saveProject({ ...project, markers }).catch(() => {})
   }
   onFiles()
   path = final
   if (!s.obs.autoLink) return
-  // HenrikDev met quelques minutes à connaître le match : plusieurs essais espacés
+  // HenrikDev takes a few minutes to know about the match: several spaced-out attempts
   let i = 0
   const attempt = async (): Promise<void> => {
     const done = await tryLink(path).catch(() => false)
@@ -379,7 +382,7 @@ const findMe = (match: MatchData, account: RiotAccount): MatchData['players'][nu
   match.players.find((p) => account.puuid && p.puuid === account.puuid) ??
   match.players.find((p) => `${p.name}#${p.tag}`.toLowerCase() === account.riotId.toLowerCase())
 
-/** true quand il n'y a plus rien à faire (lié, ou impossible) */
+/** true when there's nothing left to do (linked, or impossible) */
 async function tryLink(path: string): Promise<boolean> {
   const s = await getSettings()
   const project = await getProject(path)
@@ -391,16 +394,21 @@ async function tryLink(path: string): Promise<boolean> {
     const me = best ? findMe(best.match, account) : undefined
     if (!best || !me || !autoLinkVerdict(best, s.minLinkMinutes).ok) continue
     const times = await recTimes(path)
-    // Calage direct grâce aux fins de round notées pendant la game
+    // Instant sync thanks to the round ends noted during the game
     const sync = scoreSync(best.match, me.puuid, times.rounds)
     const anchors = sync
-      ? [{ id: `score-${Date.now()}`, matchTime: sync.matchTime, videoTime: sync.videoTime, label: 'score des rounds' }]
+      ? [{ id: `score-${Date.now()}`, matchTime: sync.matchTime, videoTime: sync.videoTime, label: tr('round score', 'score des rounds') }]
       : []
     await saveProject({
       ...(await getProject(path)),
       match: { match: best.match, puuid: me.puuid, autoOffset: (times.start - best.match.startedAt) / 1000, anchors }
     })
-    set({ last: `Rec liée à ta game sur ${best.match.map}${sync ? ', calée sur le score' : ''}` })
+    set({
+      last: tr(
+        `Recording linked to your game on ${best.match.map}${sync ? ', synced on the score' : ''}`,
+        `Rec liée à ta game sur ${best.match.map}${sync ? ', calée sur le score' : ''}`
+      )
+    })
     onLinked(path)
     return true
   }

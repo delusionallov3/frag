@@ -1,3 +1,4 @@
+import { tr } from '@shared/i18n'
 import { promises as fs, existsSync } from 'fs'
 import { basename, dirname, extname, join } from 'path'
 import { randomUUID } from 'crypto'
@@ -87,7 +88,7 @@ export async function enqueue(videoPath: string, clips: Clip[], options: ExportO
 const montages = new Map<string, MontagePlan>()
 
 export async function enqueueMontage(items: MontageItem[], opts: MontageOptions): Promise<ExportJob> {
-  if (!items.length) throw new Error('Aucun clip')
+  if (!items.length) throw new Error(tr('No clips', 'Aucun clip'))
   const settings = await getSettings()
   const folder = await outputFolderFor(items[0].videoPath)
   const stamp = new Date().toLocaleString('sv-SE').slice(0, 16).replace(' ', ' ').replace(':', '-')
@@ -161,7 +162,7 @@ async function pump(): Promise<void> {
     const duration = job.end - job.start
 
     const plan = job.kind === 'montage' ? montages.get(job.id) : undefined
-    if (job.kind === 'montage' && !plan) throw new Error('Montage introuvable, relance-le')
+    if (job.kind === 'montage' && !plan) throw new Error(tr('Montage not found, start it again', 'Montage introuvable, relance-le'))
 
     const attempt = async (enc: 'nvenc' | 'cpu'): Promise<void> => {
       job.encoder = job.options.mode === 'fast' ? 'copy' : enc
@@ -187,7 +188,7 @@ async function pump(): Promise<void> {
     try {
       await attempt(encoder)
     } catch (e) {
-      // NVENC indispo (pilote, session pleine…) : on retombe sur le CPU automatiquement
+      // NVENC unavailable (driver, sessions full…): fall back to the CPU automatically
       if (canceled.has(job.id) || job.options.mode === 'fast' || encoder === 'cpu' || settings.encoder === 'nvenc') throw e
       await attempt('cpu')
     }

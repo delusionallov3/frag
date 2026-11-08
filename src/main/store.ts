@@ -3,6 +3,7 @@ import { createHash } from 'crypto'
 import { promises as fs, mkdirSync, existsSync } from 'fs'
 import { join, normalize } from 'path'
 import type { MatchSummary, Project, RecRound, Settings, StatsEntry } from '@shared/types'
+import { setLang } from '@shared/i18n'
 
 const DEFAULT_SETTINGS: Settings = {
   recsFolder: null,
@@ -25,6 +26,9 @@ const DEFAULT_SETTINGS: Settings = {
   closeToTray: true,
   launchAtLogin: false,
   notifications: true,
+  language: 'en',
+  keyboardLayout: 'qwerty',
+  lastSeenVersion: null,
   trayHintShown: false
 }
 
@@ -52,13 +56,13 @@ export function hash(input: string): string {
   return createHash('sha1').update(input).digest('hex').slice(0, 16)
 }
 
-/** Clé de projet : basée sur le chemin seul, pour garder les clips même si le fichier est retouché. */
+/** Project key: based on the path only, so clips survive if the file is touched. */
 export function projectKey(videoPath: string): string {
-  // normalize : « C:/x » et « C:\x » donnent la même clé sous Windows
+  // normalize: "C:/x" and "C:\x" give the same key on Windows
   return hash(normalize(videoPath).toLowerCase())
 }
 
-/** Clé de cache : chemin + taille + date, pour régénérer si le fichier change. */
+/** Cache key: path + size + date, so it regenerates when the file changes. */
 export async function cacheDir(videoPath: string): Promise<string> {
   const st = await fs.stat(videoPath)
   const dir = join(paths.cache, hash(`${videoPath.toLowerCase()}|${st.size}|${Math.floor(st.mtimeMs)}`))
@@ -75,11 +79,11 @@ async function readJson<T>(file: string): Promise<T | null> {
 }
 
 /**
- * Écriture sûre d'un JSON :
- * - une seule écriture à la fois par fichier (sinon deux sauvegardes rapprochées se marchent dessus)
- * - fichier temporaire unique, puis remplacement
- * - sous Windows, le remplacement échoue parfois quelques ms (antivirus, indexation) : on réessaie,
- *   et en dernier recours on écrit directement dans le fichier
+ * Safe JSON write:
+ * - one write at a time per file (otherwise two quick saves step on each other)
+ * - unique temp file, then rename
+ * - on Windows the rename sometimes fails for a few ms (antivirus, indexing): retry,
+ *   and as a last resort write straight into the file
  */
 const writeQueues = new Map<string, Promise<void>>()
 let tmpCounter = 0
@@ -97,7 +101,7 @@ async function writeJsonNow(file: string, text: string): Promise<void> {
         await new Promise((r) => setTimeout(r, 40 * (attempt + 1)))
         continue
       }
-      // Dernier recours : écriture directe
+      // Last resort: direct write
       await fs.writeFile(file, text, 'utf8')
       await fs.rm(tmp, { force: true }).catch(() => {})
       return
@@ -123,7 +127,7 @@ export async function getSettings(): Promise<Settings> {
     const saved = await readJson<Partial<Settings> & { riotIds?: string[] }>(paths.settings)
     const { riotIds, ...rest } = saved ?? {}
     settingsCache = { ...DEFAULT_SETTINGS, ...rest, obs: { ...DEFAULT_SETTINGS.obs, ...(rest.obs ?? {}) } }
-    // Ancienne version : simple liste de Riot IDs → comptes à vérifier
+    // Old version: plain list of Riot IDs → accounts to verify
     if (riotIds?.length && !rest.accounts) {
       settingsCache.accounts = riotIds.map((riotId) => ({
         riotId,
@@ -135,6 +139,7 @@ export async function getSettings(): Promise<Settings> {
       }))
     }
   }
+  setLang(settingsCache.language)
   return { ...settingsCache, hasHenrikKey: existsSync(keyFile()), hasObsPassword: existsSync(obsFile()) }
 }
 
@@ -152,7 +157,7 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
   return getSettings()
 }
 
-/* ------------------------------------------------------------------ Clé HenrikDev (chiffrée par Windows) */
+/* ------------------------------------------------------------------ HenrikDev key (encrypted by Windows) */
 
 const keyFile = (): string => join(paths.root, 'henrik.key')
 const obsFile = (): string => join(paths.root, 'obs.key')
@@ -197,7 +202,7 @@ export async function saveProject(project: Project): Promise<void> {
   })
 }
 
-/** Tous les projets liés à un match (page Stats et montage) */
+/** All projects (Stats page and montage) */
 export async function allProjects(): Promise<Project[]> {
   let files: string[] = []
   try {
@@ -214,8 +219,8 @@ export async function allProjects(): Promise<Project[]> {
 }
 
 /**
- * Un match par entrée : si plusieurs recs sont liées au même match (une rec de test + la vraie),
- * on garde la plus utile (calée, avec des notes ou des clips, puis la plus longue)
+ * One entry per match: when several recordings are linked to the same match (a test rec + the real one),
+ * keep the most useful one (synced, with notes or clips, then the longest)
  */
 export async function statsEntries(durationOf: (path: string) => Promise<number>): Promise<StatsEntry[]> {
   const entries = (await allProjects())
@@ -244,16 +249,16 @@ export async function statsEntries(durationOf: (path: string) => Promise<number>
   return out.sort((a, b) => a.link.match.startedAt - b.link.match.startedAt)
 }
 
-/* ------------------------------------------------------------------ Infos d'enregistrement (OBS piloté par Frag) */
+/* ------------------------------------------------------------------ Recording info (OBS driven by Frag) */
 
 export interface RecMeta {
   path: string
-  /** epoch ms exact du début (événement OBS) */
+  /** exact start in epoch ms (OBS event) */
   start: number
   end: number | null
-  /** lancée par Frag ou détectée pendant une game */
+  /** started by Frag, or detected during a game */
   by: 'frag' | 'obs'
-  /** fins de round vues pendant la game */
+  /** round ends seen during the game */
   rounds?: RecRound[]
 }
 

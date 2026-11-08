@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AutoRecStatus, EncoderInfo, ExportJob, Settings } from '@shared/types'
+import { setLang } from '@shared/i18n'
 
 interface Toast {
   id: number
@@ -17,6 +18,7 @@ interface AppState {
   settingsOpen: boolean
   shortcutsOpen: boolean
   montageOpen: boolean
+  whatsNewOpen: boolean
   toast: Toast | null
   autoRec: AutoRecStatus | null
 
@@ -30,6 +32,7 @@ interface AppState {
   setSettingsOpen: (v: boolean) => void
   setShortcutsOpen: (v: boolean) => void
   setMontageOpen: (v: boolean) => void
+  setWhatsNewOpen: (v: boolean) => void
   showToast: (text: string, action?: Toast['action']) => void
 }
 
@@ -45,11 +48,14 @@ export const useApp = create<AppState>((set, get) => ({
   settingsOpen: false,
   shortcutsOpen: false,
   montageOpen: false,
+  whatsNewOpen: false,
   toast: null,
   autoRec: null,
 
   init: async () => {
     const [settings, jobs] = await Promise.all([window.frag.getSettings(), window.frag.listJobs()])
+    setLang(settings.language)
+    document.documentElement.lang = settings.language
     set({ settings, jobs })
     window.frag.onJobs((jobs) => set({ jobs }))
     window.frag.autoRecStatus().then((autoRec) => set({ autoRec }))
@@ -58,6 +64,10 @@ export const useApp = create<AppState>((set, get) => ({
   },
   updateSettings: async (patch) => {
     const cur = get().settings
+    if (patch.language) {
+      setLang(patch.language)
+      document.documentElement.lang = patch.language
+    }
     if (cur) set({ settings: { ...cur, ...patch } })
     const settings = await window.frag.setSettings(patch)
     set({ settings })
@@ -70,6 +80,7 @@ export const useApp = create<AppState>((set, get) => ({
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
   setMontageOpen: (montageOpen) => set({ montageOpen }),
+  setWhatsNewOpen: (whatsNewOpen) => set({ whatsNewOpen }),
   showToast: (text, action) => {
     if (toastTimer) clearTimeout(toastTimer)
     set({ toast: { id: Date.now(), text, action } })

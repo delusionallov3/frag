@@ -3,9 +3,9 @@ import { autoUpdater } from 'electron-updater'
 import type { UpdateStatus } from '@shared/types'
 
 /**
- * Mises à jour via les releases GitHub (electron-updater lit latest.yml dans la dernière release).
- * La nouvelle version se télécharge en arrière-plan puis s'installe quand on quitte Frag,
- * ou tout de suite si on clique « Redémarrer pour mettre à jour ».
+ * Updates from GitHub releases (electron-updater reads latest.yml from the latest release).
+ * The new version downloads in the background, then installs when Frag quits,
+ * or right away from "Restart to update".
  */
 
 const CHECK_EVERY = 4 * 60 * 60 * 1000
@@ -53,12 +53,12 @@ export function startUpdater(onStatus: (s: UpdateStatus) => void, onUpdateReady:
     if (!already) onReady(info.version)
   })
   autoUpdater.on('error', (e) => {
-    // Une mise à jour déjà téléchargée reste installable même si une vérification suivante échoue
+    // A downloaded update stays installable even if a later check fails
     if (status.state === 'ready') return
     set({ state: 'error', error: e instanceof Error ? e.message : String(e), checkedAt: Date.now() })
   })
 
-  // Premier contrôle un peu après le lancement, pour ne pas ralentir le démarrage
+  // First check a little after launch, so startup isn't slowed down
   setTimeout(() => void checkForUpdates(), 15000)
   timer = setInterval(() => void checkForUpdates(), CHECK_EVERY)
 }
@@ -75,7 +75,7 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
   return status
 }
 
-/** Quitte Frag et lance l'installeur de la nouvelle version (sans fenêtre), puis relance Frag */
+/** Quit Frag, run the new version's installer silently, then relaunch Frag */
 export function installUpdate(): void {
   if (status.state !== 'ready') return
   autoUpdater.quitAndInstall(true, true)

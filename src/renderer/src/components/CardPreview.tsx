@@ -1,13 +1,14 @@
+import { tr } from '@shared/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import type { CardLayer, CardStyle } from '@shared/types'
 import { renderCard, type CardText } from '../lib/cards'
 import { mediaUrl } from '../lib/format'
 
-/** Mêmes valeurs que src/main/montage.ts, pour que l'aperçu colle à l'export */
+/** Same values as src/main/montage.ts, so the preview matches the export */
 const ENTER = 0.45
 const FADE_OUT = 0.35
-/** durée d'un clip « type » dans l'aperçu, pour les calques qui restent jusqu'à la fin */
+/** length of a sample clip in the preview, for layers that stay until the end */
 const PREVIEW_CLIP = 4.5
 const easeOutCubic = 'cubic-bezier(0.33, 1, 0.68, 1)'
 
@@ -35,7 +36,7 @@ export default function CardPreview({
   const [layers, setLayers] = useState<Shown[]>([])
   const [run, setRun] = useState(0)
 
-  // Image du jeu au début du clip, en fond
+  // Game frame at the start of the clip, as the background
   useEffect(() => {
     setBg(null)
     if (!videoPath || at === null) return
@@ -55,7 +56,7 @@ export default function CardPreview({
     return () => ro.disconnect()
   }, [])
 
-  // Dessin du carton (petit délai : on ne redessine pas à chaque lettre tapée)
+  // Draw the card (small debounce: don't redraw on every keystroke)
   const key = `${style}|${accent}|${text.title}|${text.sub}|${text.index}|${text.total}`
   useEffect(() => {
     let alive = true
@@ -79,7 +80,7 @@ export default function CardPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
-  // Animations : rejouées en boucle avec le même minutage que ffmpeg
+  // Animations: looped with the same timing as ffmpeg
   useEffect(() => {
     const el = frameRef.current
     if (!el || !width) return
@@ -149,7 +150,7 @@ export default function CardPreview({
         })}
         {style === 'none' && <span className="cp-none">Sans carton</span>}
       </div>
-      <button className="icon-btn cp-replay" onClick={() => setRun((r) => r + 1)} title="Rejouer">
+      <button className="icon-btn cp-replay" onClick={() => setRun((r) => r + 1)} title={tr('Replay', 'Rejouer')}>
         <RotateCcw />
       </button>
     </div>

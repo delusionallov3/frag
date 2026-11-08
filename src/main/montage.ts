@@ -1,3 +1,4 @@
+import { tr } from '@shared/i18n'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -6,13 +7,13 @@ import { probe, type CutArgs } from './ffmpeg'
 
 const CQ = { high: 18, balanced: 23, light: 28 } as const
 
-/** Durées des animations des cartons (s) */
+/** Title card animation durations (s) */
 const ENTER = 0.45
 const FADE_OUT = 0.35
 
 /**
- * Expressions ffmpeg (entre apostrophes : les virgules ne coupent pas le filtre).
- * e = reste de l'entrée, de 1 (début) à 0 (en place), en « ease-out » cubique.
+ * ffmpeg expressions (inside quotes, so commas don't split the filter).
+ * e = how much of the entrance is left, from 1 (start) to 0 (in place), cubic ease-out.
  */
 function layerMotion(l: CardLayer, X: number, Y: number, w: number, h: number, H: number): { x: string; y: string } {
   const e = `pow(1-clip((t-${l.delay.toFixed(3)})/${ENTER},0,1),3)`
@@ -43,7 +44,7 @@ export async function planMontage(
   audio: CutArgs['audio'],
   output: string
 ): Promise<MontagePlan> {
-  if (items.length < 1) throw new Error('Aucun clip dans le montage')
+  if (items.length < 1) throw new Error(tr('No clips in the montage', 'Aucun clip dans le montage'))
   const metas = await Promise.all(items.map((it) => probe(it.videoPath)))
   const W = metas[0].width - (metas[0].width % 2) || 1920
   const H = metas[0].height - (metas[0].height % 2) || 1080
@@ -57,7 +58,7 @@ export async function planMontage(
 
   const inputs: string[] = []
   const parts: string[] = []
-  /** index ffmpeg de la prochaine entrée (les images des cartons s'intercalent entre les vidéos) */
+  /** ffmpeg index of the next input (card images sit between the videos) */
   const nextInput = (): number => inputs.filter((x) => x === '-i').length
 
   for (let i = 0; i < items.length; i++) {
@@ -66,11 +67,11 @@ export async function planMontage(
     const src = nextInput()
     inputs.push('-ss', it.start.toFixed(3), '-t', d.toFixed(3), '-i', it.videoPath)
 
-    // le temps repart de 0 AVANT fps=, sinon xfade perd la fréquence d'images
+    // reset time to 0 BEFORE fps=, otherwise xfade loses the frame rate
     const v = `[${src}:v:0]settb=AVTB,setpts=PTS-STARTPTS,scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${FPS},format=yuv420p`
     parts.push(`${v}[b${i}_0]`)
 
-    // Cartons titres : chaque calque est une image en boucle, incrustée avec son animation
+    // Title cards: each layer is a looped image, overlaid with its animation
     let base = `b${i}_0`
     for (let k = 0; k < it.layers.length; k++) {
       const l = it.layers[k]

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FolderOpen, Search, Film, FileVideo, AlertTriangle, Scissors, Clapperboard, Trash2 } from 'lucide-react'
 import type { CardInfo, VideoEntry } from '@shared/types'
+import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { useLookup } from '../lib/assets'
 import VImg from './VImg'
@@ -81,9 +82,9 @@ function MatchRow({
               <span>{m.mode}</span>
             </>
           ) : (
-            <span>{short ? 'Rec courte, pas liée' : 'Pas encore liée à un match'}</span>
+            <span>{short ? tr('Short rec, not linked', 'Rec courte, pas liée') : tr('Not linked to a match yet', 'Pas encore liée à un match')}</span>
           )}
-          {short && m && <span className="mrow-short">Rec courte</span>}
+          {short && m && <span className="mrow-short">{tr('Short rec', 'Rec courte')}</span>}
           <span>{hourLabel(v.mtime)}</span>
           <span>{fmtSize(v.size)}</span>
           {meta && meta.height > 0 && (
@@ -108,7 +109,7 @@ function MatchRow({
           </div>
           <div className={`mrow-stat mrow-score ${result}`}>
             <span className="mrow-figure">{m.score || '–'}</span>
-            <span className="mrow-label">{m.won === true ? 'Victoire' : m.won === false ? 'Défaite' : 'Score'}</span>
+            <span className="mrow-label">{m.won === true ? tr('Win', 'Victoire') : m.won === false ? tr('Loss', 'Défaite') : 'Score'}</span>
           </div>
           <div className="mrow-rank" title={tier?.name ?? m.rank ?? ''}>
             {tier?.icon ? <VImg src={tier.icon} className="mrow-rank-img" /> : null}
@@ -133,7 +134,7 @@ function MatchRow({
     </button>
       <button
         className="mrow-trash"
-        title="Mettre à la corbeille"
+        title={tr('Move to Recycle Bin', 'Mettre à la corbeille')}
         onClick={(e) => {
           e.stopPropagation()
           onTrash()
@@ -177,7 +178,7 @@ export default function Library(): JSX.Element {
     if (res.ok) {
       setVideos((list) => list?.filter((x) => x.path !== trash.path) ?? null)
       setTrash(null)
-      useApp.getState().showToast(`« ${stripExt(trash.name)} » mise à la corbeille`)
+      useApp.getState().showToast(tr(`“${stripExt(trash.name)}” moved to the Recycle Bin`, `« ${stripExt(trash.name)} » mise à la corbeille`))
     } else setTrashError(res.error)
   }
 
@@ -196,7 +197,7 @@ export default function Library(): JSX.Element {
   }, [videos, query, hideShort, minShort])
 
   const pickFolder = async (): Promise<void> => {
-    const p = await window.frag.pickFolder('Choisis le dossier où OBS enregistre tes recs')
+    const p = await window.frag.pickFolder(tr('Pick the folder where OBS saves your recordings', 'Choisis le dossier où OBS enregistre tes recs'))
     if (p) {
       setVideos(null)
       await updateSettings({ recsFolder: p })
@@ -214,22 +215,24 @@ export default function Library(): JSX.Element {
         <div className="empty-icon">
           <Film size={28} />
         </div>
-        <h1>Branche ton dossier de recs</h1>
+        <h1>{tr('Connect your recordings folder', 'Branche ton dossier de recs')}</h1>
         <p>
-          Choisis le dossier où OBS enregistre tes games. Frag le surveille : chaque nouvelle rec apparaît ici toute
-          seule dès que tu arrêtes l’enregistrement.
+          {tr(
+            'Pick the folder where OBS saves your games. Frag watches it: every new recording shows up here as soon as you stop recording.',
+            'Choisis le dossier où OBS enregistre tes games. Frag le surveille : chaque nouvelle rec apparaît ici toute seule dès que tu arrêtes l’enregistrement.'
+          )}
         </p>
         <div className="row gap-8">
           <button className="btn btn-primary btn-lg" onClick={pickFolder}>
             <FolderOpen size={16} />
-            Choisir le dossier
+            {tr('Choose folder', 'Choisir le dossier')}
           </button>
           <button className="btn btn-ghost btn-lg" onClick={openFile}>
             <FileVideo size={16} />
-            Ouvrir un fichier
+            {tr('Open a file', 'Ouvrir un fichier')}
           </button>
         </div>
-        <span className="hint">Tu peux aussi glisser une vidéo dans la fenêtre</span>
+        <span className="hint">{tr('You can also drop a video onto the window', 'Tu peux aussi glisser une vidéo dans la fenêtre')}</span>
       </div>
     )
   }
@@ -242,15 +245,16 @@ export default function Library(): JSX.Element {
     <div className="library">
       <div className="library-head">
         <div className="library-title">
-          <h1>Tes recs</h1>
+          <h1>{tr('Your recordings', 'Tes recs')}</h1>
           <div className="library-meta">
             {videos && (
               <span className="library-counts">
-                {total} {total > 1 ? 'recs' : 'rec'} · {linked} {linked > 1 ? 'matchs liés' : 'match lié'} · {clips}{' '}
-                {clips > 1 ? 'clips' : 'clip'}
+                {total} {total === 1 ? 'rec' : 'recs'} · {linked}{' '}
+                {linked === 1 ? tr('linked match', 'match lié') : tr('linked matches', 'matchs liés')} · {clips}{' '}
+                {clips === 1 ? 'clip' : 'clips'}
               </span>
             )}
-            <button className="folder-chip" onClick={pickFolder} title="Changer de dossier">
+            <button className="folder-chip" onClick={pickFolder} title={tr('Change folder', 'Changer de dossier')}>
               <FolderOpen size={14} />
               <span>{folder}</span>
             </button>
@@ -258,11 +262,14 @@ export default function Library(): JSX.Element {
               <button
                 className="folder-chip"
                 onClick={() => updateSettings({ hideShortRecs: !hideShort })}
-                title={`Recs de moins de ${settings?.minLinkMinutes ?? 5} min (réglable dans les réglages)`}
+                title={tr(
+                  `Recordings under ${settings?.minLinkMinutes ?? 5} min (change it in Settings)`,
+                  `Recs de moins de ${settings?.minLinkMinutes ?? 5} min (réglable dans les réglages)`
+                )}
               >
                 {hideShort
-                  ? `Afficher les ${shortCount} recs courtes`
-                  : `Masquer les recs courtes (${shortCount})`}
+                  ? tr(`Show ${shortCount} short recs`, `Afficher les ${shortCount} recs courtes`)
+                  : tr(`Hide short recs (${shortCount})`, `Masquer les recs courtes (${shortCount})`)}
               </button>
             )}
           </div>
@@ -270,7 +277,7 @@ export default function Library(): JSX.Element {
         <div className="row gap-8">
           <label className="search">
             <Search size={15} />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher" spellCheck={false} />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr('Search', 'Rechercher')} spellCheck={false} />
           </label>
           <button className="btn btn-ghost" onClick={() => useApp.getState().setMontageOpen(true)}>
             <Clapperboard size={15} />
@@ -278,7 +285,7 @@ export default function Library(): JSX.Element {
           </button>
           <button className="btn btn-ghost" onClick={openFile}>
             <FileVideo size={15} />
-            Ouvrir un fichier
+            {tr('Open a file', 'Ouvrir un fichier')}
           </button>
         </div>
       </div>
@@ -297,15 +304,20 @@ export default function Library(): JSX.Element {
         <div className="empty-inline">
           <Film size={22} />
           <div>
-            <strong>Aucune rec dans ce dossier pour l’instant</strong>
-            <span>Lance une game avec OBS, elle apparaîtra ici dès la fin de l’enregistrement.</span>
+            <strong>{tr('No recordings in this folder yet', 'Aucune rec dans ce dossier pour l’instant')}</strong>
+            <span>
+              {tr(
+                'Play a game with OBS recording, it will show up here as soon as the recording ends.',
+                'Lance une game avec OBS, elle apparaîtra ici dès la fin de l’enregistrement.'
+              )}
+            </span>
           </div>
         </div>
       ) : groups.length === 0 ? (
         <div className="empty-inline">
           <Search size={20} />
           <div>
-            <strong>Rien ne correspond à « {query} »</strong>
+            <strong>{tr(`Nothing matches “${query}”`, `Rien ne correspond à « ${query} »`)}</strong>
           </div>
         </div>
       ) : (
@@ -333,7 +345,7 @@ export default function Library(): JSX.Element {
         ))
       )}
 
-      <Modal open={!!trash} title="Mettre à la corbeille ?" onClose={() => setTrash(null)} width={460}>
+      <Modal open={!!trash} title={tr('Move to Recycle Bin?', 'Mettre à la corbeille ?')} onClose={() => setTrash(null)} width={460}>
         {trash && (
           <div className="confirm">
             <p>
@@ -342,17 +354,19 @@ export default function Library(): JSX.Element {
               {trash.match && ` · ${trash.match.map}`}
             </p>
             <p className="confirm-sub">
-              La vidéo part dans la corbeille de Windows (tu peux la restaurer). Ses clips et son match lié sont oubliés
-              par Frag ; les clips déjà exportés ne sont pas touchés.
+              {tr(
+                'The video goes to the Windows Recycle Bin (you can restore it). Frag forgets its clips and linked match; clips you already exported are not touched.',
+                'La vidéo part dans la corbeille de Windows (tu peux la restaurer). Ses clips et son match lié sont oubliés par Frag ; les clips déjà exportés ne sont pas touchés.'
+              )}
             </p>
             {trashError && <p className="confirm-err">{trashError}</p>}
             <div className="row gap-8 confirm-actions">
               <button className="btn btn-ghost" onClick={() => setTrash(null)}>
-                Annuler
+                {tr('Cancel', 'Annuler')}
               </button>
               <button className="btn btn-danger" onClick={() => void confirmTrash()} autoFocus>
                 <Trash2 size={14} />
-                Mettre à la corbeille
+                {tr('Move to Recycle Bin', 'Mettre à la corbeille')}
               </button>
             </div>
           </div>

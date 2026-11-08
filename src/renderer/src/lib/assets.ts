@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { AgentAsset, MapAsset, TierAsset, ValAssets, WeaponAsset } from '@shared/types'
 
-/** Les images passent par le cache local de l'app (fonctionne hors ligne une fois téléchargées) */
+/** Images go through the app's local cache (works offline once downloaded) */
 export const assetUrl = (u?: string | null): string | null => (u ? `frag-media://asset/?u=${encodeURIComponent(u)}` : null)
 
 interface Index {
@@ -67,7 +67,7 @@ export function useLookup(): {
     agent: (id, name) => index?.agents.get(key(id)) ?? index?.agents.get(key(name)) ?? null,
     map: (id, name) => index?.maps.get(key(id)) ?? index?.maps.get(key(name)) ?? null,
     weapon: (id, name) => index?.weapons.get(key(id)) ?? index?.weapons.get(key(name)) ?? null,
-    // Par numéro de rang, sinon par nom (« Diamond 2 ») pour les matchs liés avant que le numéro soit gardé
+    // By rank number, else by name ("Diamond 2") for matches linked before the number was stored
     tier: (n, name) =>
       (n ? index?.tiers.get(n) : undefined) ??
       (name ? [...(index?.tiers.values() ?? [])].find((t) => t.name.toLowerCase() === name.toLowerCase()) : undefined) ??

@@ -52,7 +52,7 @@ export async function watchFolder(folder: string | null, onChange: () => void): 
   watcher = chokidar.watch(folder, {
     depth: 0,
     ignoreInitial: true,
-    // OBS écrit le fichier pendant toute la game : on attend qu'il soit stable
+    // OBS writes the file for the whole game: wait until it's stable
     awaitWriteFinish: { stabilityThreshold: 4000, pollInterval: 500 }
   })
   const fire = (p: string): void => {

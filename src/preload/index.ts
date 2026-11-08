@@ -38,6 +38,8 @@ const on = <T>(channel: string, fn: (payload: T) => void): (() => void) => {
 
 const api = {
   platform: process.platform,
+  /** App version, passed by the main process (the preload has no access to `app`) */
+  version: process.argv.find((a) => a.startsWith('--frag-version='))?.split('=')[1] ?? '0.0.0',
   getSettings: (): Promise<Settings> => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: Partial<Settings>): Promise<Settings> => ipcRenderer.invoke('settings:set', patch),
   pickFolder: (title: string): Promise<string | null> => ipcRenderer.invoke('dialog:folder', title),
@@ -102,7 +104,7 @@ const api = {
   checkForUpdates: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
   installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
   onUpdateStatus: (fn: (s: UpdateStatus) => void) => on('update:status', fn),
-  /** Clic sur une notification : ouvrir une rec / les réglages */
+  /** Notification clicks: open a recording / Settings */
   onOpenVideo: (fn: (path: string) => void) => on('ui:openVideo', fn),
   onOpenSettings: (fn: () => void) => on('ui:openSettings', fn),
 

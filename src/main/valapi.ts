@@ -4,7 +4,7 @@ import { extname, join } from 'path'
 import type { AgentAsset, MapAsset, TierAsset, ValAssets, WeaponAsset } from '@shared/types'
 import { paths, readJson, writeJson } from './store'
 
-/** API publique et gratuite (pas de clé) : https://valorant-api.com */
+/** Free public API (no key): https://valorant-api.com */
 const BASE = process.env['FRAG_VALAPI_BASE'] || 'https://valorant-api.com'
 const MEDIA_HOSTS = new Set(['media.valorant-api.com', ...(process.env['FRAG_VALAPI_BASE'] ? [new URL(BASE).host] : [])])
 const TTL = 7 * 24 * 3600 * 1000
@@ -65,7 +65,7 @@ interface RawIconItem {
   killStreamIcon?: string | null
 }
 
-/** Pas d'endpoint dédié au spike : on cherche l'équipement « Spike », sinon l'icône du mode Spike Rush */
+/** No dedicated spike endpoint: look for the "Spike" gear, else the Spike Rush mode icon */
 async function findSpike(): Promise<string | null> {
   const isSpike = (n?: string | null): boolean => /spike/i.test(n ?? '') && !/rush/i.test(n ?? '')
   try {
@@ -73,7 +73,7 @@ async function findSpike(): Promise<string | null> {
     const hit = eq.find((e) => isSpike(e.displayName))
     if (hit) return hit.killStreamIcon ?? hit.displayIcon ?? null
   } catch {
-    /* endpoint absent */
+    /* endpoint missing */
   }
   try {
     const modes = await get<RawIconItem[]>('/v1/gamemodes')
@@ -137,7 +137,7 @@ let lastError: string | null = null
 export const assetsError = (): string | null => lastError
 let pending: Promise<ValAssets | null> | null = null
 
-/** Assets en cache disque (7 jours) ; si le site est injoignable on garde l'ancien cache */
+/** Assets cached on disk (7 days); if the site is unreachable, keep the old cache */
 export function getAssets(force = false): Promise<ValAssets | null> {
   if (memo && !force && Date.now() - memo.fetchedAt < TTL) return Promise.resolve(memo)
   if (pending) return pending
@@ -164,11 +164,11 @@ export function getAssets(force = false): Promise<ValAssets | null> {
   return pending
 }
 
-/* ------------------------------------------------------------------ Images en cache local */
+/* ------------------------------------------------------------------ Locally cached images */
 
 const IMG_TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' }
 
-/** Télécharge (une fois) une image de media.valorant-api.com et renvoie le fichier local */
+/** Downloads (once) an image from media.valorant-api.com and returns the local file */
 export async function cachedImage(url: string): Promise<{ file: string; type: string } | null> {
   let u: URL
   try {

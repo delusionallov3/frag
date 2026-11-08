@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Play, Trash2, Download, Scissors, FolderOpen, Check } from 'lucide-react'
 import type { AudioMode, Clip, ExportMode, ExportQuality } from '@shared/types'
+import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { fmtClipLen, fmtTime } from '../lib/format'
 
@@ -87,7 +88,7 @@ function ClipRow({
           e.stopPropagation()
           p.onToggle(clip.id)
         }}
-        title={included ? 'Inclus dans l’export' : 'Exclu de l’export'}
+        title={included ? tr('Included in export', 'Inclus dans l’export') : tr('Excluded from export', 'Exclu de l’export')}
       >
         {included && <Check size={11} strokeWidth={3} />}
       </button>
@@ -118,7 +119,7 @@ function ClipRow({
               setDraft(clip.name)
               setEditing(true)
             }}
-            title="Double-clic pour renommer"
+            title={tr('Double-click to rename', 'Double-clic pour renommer')}
           >
             <span className="clip-index">{index + 1}</span>
             {clip.name}
@@ -132,7 +133,7 @@ function ClipRow({
       <div className="clip-actions">
         <button
           className="icon-btn"
-          title="Lire le clip"
+          title={tr('Play clip', 'Lire le clip')}
           onClick={(e) => {
             e.stopPropagation()
             p.onPlay(clip)
@@ -142,7 +143,7 @@ function ClipRow({
         </button>
         <button
           className="icon-btn"
-          title="Exporter ce clip"
+          title={tr('Export this clip', 'Exporter ce clip')}
           onClick={(e) => {
             e.stopPropagation()
             p.onExport([clip])
@@ -152,7 +153,7 @@ function ClipRow({
         </button>
         <button
           className="icon-btn is-danger"
-          title="Supprimer (Suppr)"
+          title={tr('Delete (Del)', 'Supprimer (Suppr)')}
           onClick={(e) => {
             e.stopPropagation()
             p.onDelete(clip.id)
@@ -185,10 +186,10 @@ export default function ClipPanel(p: Props): JSX.Element {
       {p.clips.length > 1 && (
         <div className="side-sub">
           <span>
-            {included.length} / {p.clips.length} cochés pour l’export
+            {included.length} / {p.clips.length} {tr('selected for export', 'cochés pour l’export')}
           </span>
           <button className="link-btn" onClick={() => p.onToggleAll(!allOn)}>
-            {allOn ? 'Tout décocher' : 'Tout cocher'}
+            {allOn ? tr('Deselect all', 'Tout décocher') : tr('Select all', 'Tout cocher')}
           </button>
         </div>
       )}
@@ -199,13 +200,16 @@ export default function ClipPanel(p: Props): JSX.Element {
             <div className="clip-empty-icon">
               <Scissors size={18} />
             </div>
-            <strong>Pas encore de clip</strong>
+            <strong>{tr('No clips yet', 'Pas encore de clip')}</strong>
             <p>
-              Regarde ta game, et au moment d’une action appuie sur <kbd>C</kbd> : ça crée un clip des 10 dernières
-              secondes.
+              {tr('Watch your game, and when something happens press', 'Regarde ta game, et au moment d’une action appuie sur')}{' '}
+              <kbd>C</kbd>
+              {tr(': it makes a clip of the last 10 seconds.', ' : ça crée un clip des 10 dernières secondes.')}
             </p>
             <p>
-              Ajuste ensuite le début avec <kbd>I</kbd> et la fin avec <kbd>O</kbd>, ou tire les bords sur la timeline.
+              {tr('Then fine-tune the start with', 'Ajuste ensuite le début avec')} <kbd>I</kbd>{' '}
+              {tr('and the end with', 'et la fin avec')} <kbd>O</kbd>
+              {tr(', or drag the edges on the timeline.', ', ou tire les bords sur la timeline.')}
             </p>
           </div>
         ) : (
@@ -224,49 +228,57 @@ export default function ClipPanel(p: Props): JSX.Element {
 
       <div className="export-box">
         <div className="field">
-          <label>Méthode</label>
+          <label>{tr('Method', 'Méthode')}</label>
           <Segmented<ExportMode>
             value={mode}
             onChange={(v) => updateSettings({ exportMode: v })}
             options={[
               {
                 value: 'precise',
-                label: nvenc ? 'Précise · NVENC' : 'Précise',
-                title: 'Coupe à l’image près, réencodée (très rapide avec ta carte Nvidia)'
+                label: nvenc ? tr('Precise · NVENC', 'Précise · NVENC') : tr('Precise', 'Précise'),
+                title: tr(
+                  'Frame-accurate cut, re-encoded (very fast on your Nvidia GPU)',
+                  'Coupe à l’image près, réencodée (très rapide avec ta carte Nvidia)'
+                )
               },
               {
                 value: 'fast',
-                label: 'Instantanée',
-                title: 'Aucun réencodage : qualité d’origine, mais la coupe se cale sur l’image clé la plus proche'
+                label: tr('Instant', 'Instantanée'),
+                title: tr(
+                  'No re-encoding: original quality, but the cut snaps to the nearest keyframe',
+                  'Aucun réencodage : qualité d’origine, mais la coupe se cale sur l’image clé la plus proche'
+                )
               }
             ]}
           />
         </div>
         <div className="field">
-          <label>Qualité</label>
+          <label>{tr('Quality', 'Qualité')}</label>
           <Segmented<ExportQuality>
             value={settings.quality}
             disabled={mode === 'fast'}
             onChange={(v) => updateSettings({ quality: v })}
             options={[
-              { value: 'high', label: 'Haute' },
-              { value: 'balanced', label: 'Équilibrée' },
-              { value: 'light', label: 'Légère' }
+              { value: 'high', label: tr('High', 'Haute') },
+              { value: 'balanced', label: tr('Balanced', 'Équilibrée') },
+              { value: 'light', label: tr('Light', 'Légère') }
             ]}
           />
         </div>
         <div className="field">
           <label>
             Audio
-            {p.audioTracks > 1 && <span className="field-note">{p.audioTracks} pistes détectées</span>}
+            {p.audioTracks > 1 && (
+              <span className="field-note">{tr(`${p.audioTracks} tracks found`, `${p.audioTracks} pistes détectées`)}</span>
+            )}
           </label>
           <Segmented<AudioMode>
             value={settings.audio}
             onChange={(v) => updateSettings({ audio: v })}
             options={[
-              { value: 'all', label: 'Toutes', title: 'Garde toutes les pistes séparées' },
-              { value: 'first', label: 'Piste 1', title: 'Seulement la première piste' },
-              { value: 'mix', label: 'Mixer', title: 'Fusionne toutes les pistes en une seule' }
+              { value: 'all', label: tr('All', 'Toutes'), title: tr('Keep every track separate', 'Garde toutes les pistes séparées') },
+              { value: 'first', label: tr('Track 1', 'Piste 1'), title: tr('First track only', 'Seulement la première piste') },
+              { value: 'mix', label: tr('Mix', 'Mixer'), title: tr('Merge all tracks into one', 'Fusionne toutes les pistes en une seule') }
             ]}
           />
         </div>
@@ -277,7 +289,7 @@ export default function ClipPanel(p: Props): JSX.Element {
           onClick={() => p.onExport(included)}
         >
           <Download size={16} />
-          {included.length <= 1 ? 'Exporter le clip' : `Exporter ${included.length} clips`}
+          {included.length <= 1 ? tr('Export clip', 'Exporter le clip') : tr(`Export ${included.length} clips`, `Exporter ${included.length} clips`)}
           <kbd className="kbd-inline">⇧E</kbd>
         </button>
         {outFolder && (

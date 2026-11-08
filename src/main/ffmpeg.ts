@@ -1,3 +1,4 @@
+import { tr } from '@shared/i18n'
 import { spawn, type ChildProcess } from 'child_process'
 import { promises as fs, existsSync } from 'fs'
 import { join } from 'path'
@@ -12,7 +13,7 @@ export const FFMPEG = unpacked(ffmpegStatic as unknown as string)
 export const FFPROBE = unpacked(ffprobeStatic.path)
 
 /* ------------------------------------------------------------------ */
-/* Petit limiteur de concurrence pour ne pas lancer 40 ffmpeg à la fois */
+/* Small concurrency limiter so we don't spawn 40 ffmpeg at once */
 
 function limiter(max: number) {
   let active = 0
@@ -73,7 +74,7 @@ function parseRate(rate?: string): number {
 }
 
 /* ------------------------------------------------------------------ */
-/* Infos vidéo */
+/* Video info */
 
 const metaMemo = new Map<string, VideoMeta>()
 
@@ -91,7 +92,7 @@ export async function probe(videoPath: string): Promise<VideoMeta> {
   const res = await light(() =>
     run(FFPROBE, ['-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', videoPath])
   )
-  if (res.code !== 0) throw new Error(res.stderr.trim() || 'ffprobe a échoué')
+  if (res.code !== 0) throw new Error(res.stderr.trim() || tr('ffprobe failed', 'ffprobe a échoué'))
   const json = JSON.parse(res.stdout.toString()) as {
     format?: { duration?: string }
     streams?: {
@@ -106,9 +107,9 @@ export async function probe(videoPath: string): Promise<VideoMeta> {
   }
   const streams = json.streams ?? []
   const v = streams.find((s) => s.codec_type === 'video')
-  if (!v) throw new Error('Aucune piste vidéo')
+  if (!v) throw new Error(tr('No video track', 'Aucune piste vidéo'))
   const duration = Number(json.format?.duration ?? v.duration ?? 0)
-  if (!duration) throw new Error('Durée inconnue (enregistrement en cours ?)')
+  if (!duration) throw new Error(tr('Unknown duration (still recording?)', 'Durée inconnue (enregistrement en cours ?)'))
   const fps = parseRate(v.avg_frame_rate) || parseRate(v.r_frame_rate) || 60
   const meta: VideoMeta = {
     duration,
@@ -124,7 +125,7 @@ export async function probe(videoPath: string): Promise<VideoMeta> {
 }
 
 /* ------------------------------------------------------------------ */
-/* Miniature de la carte (bibliothèque) */
+/* Card thumbnail (library) */
 
 export async function poster(videoPath: string, duration: number): Promise<string> {
   const dir = await cacheDir(videoPath)
@@ -142,11 +143,11 @@ export async function poster(videoPath: string, duration: number): Promise<strin
       out
     ])
   )
-  if (res.code !== 0 || !existsSync(out)) throw new Error(res.stderr.trim() || 'Miniature impossible')
+  if (res.code !== 0 || !existsSync(out)) throw new Error(res.stderr.trim() || tr('Thumbnail failed', 'Miniature impossible'))
   return out
 }
 
-/** Une image précise (fond de l'aperçu des cartons du montage) */
+/** One exact frame (background of the montage title card preview) */
 export async function frameAt(videoPath: string, t: number): Promise<string> {
   const dir = join(await cacheDir(videoPath), 'frames')
   await fs.mkdir(dir, { recursive: true })
@@ -163,12 +164,12 @@ export async function frameAt(videoPath: string, t: number): Promise<string> {
       out
     ])
   )
-  if (res.code !== 0 || !existsSync(out)) throw new Error(res.stderr.trim() || 'Image impossible')
+  if (res.code !== 0 || !existsSync(out)) throw new Error(res.stderr.trim() || tr('Frame grab failed', 'Image impossible'))
   return out
 }
 
 /* ------------------------------------------------------------------ */
-/* Bande de miniatures pour la timeline */
+/* Thumbnail strip for the timeline */
 
 export async function thumbStrip(videoPath: string, duration: number): Promise<ThumbStrip> {
   const dir = join(await cacheDir(videoPath), 'strip')
@@ -179,7 +180,7 @@ export async function thumbStrip(videoPath: string, duration: number): Promise<T
   await fs.rm(dir, { recursive: true, force: true })
   await fs.mkdir(dir, { recursive: true })
 
-  // ~240 vignettes quel que soit la durée, minimum une toutes les 2 s
+  // ~240 thumbnails whatever the length, at least one every 2 s
   const interval = Math.max(2, Math.round((duration / 240) * 10) / 10)
   const res = await heavy(() =>
     run(FFMPEG, [
@@ -193,14 +194,14 @@ export async function thumbStrip(videoPath: string, duration: number): Promise<T
     ])
   )
   const files = (await fs.readdir(dir)).filter((f) => f.endsWith('.jpg'))
-  if (res.code !== 0 && files.length === 0) throw new Error(res.stderr.trim() || 'Vignettes impossibles')
+  if (res.code !== 0 && files.length === 0) throw new Error(res.stderr.trim() || tr('Thumbnails failed', 'Vignettes impossibles'))
   const strip: ThumbStrip = { dir, interval, count: files.length }
   await writeJson(doneFile, strip)
   return strip
 }
 
 /* ------------------------------------------------------------------ */
-/* Forme d'onde audio */
+/* Audio waveform */
 
 const PEAKS_PER_SECOND = 50
 const SAMPLE_RATE = 8000
@@ -257,11 +258,11 @@ export async function waveform(videoPath: string): Promise<Waveform> {
         proc.on('close', (code) => {
           if (count > 0) out.push(max)
           if (code !== 0 && out.length === 0) {
-            // Pas d'audio : on renvoie une onde vide plutôt qu'une erreur
+            // No audio: return an empty waveform rather than an error
             if (/matches no streams|does not contain any stream/i.test(err)) return resolve(new Uint8Array())
-            return reject(new Error(err.trim() || 'Forme d’onde impossible'))
+            return reject(new Error(err.trim() || tr('Waveform failed', 'Forme d’onde impossible')))
           }
-          // Normalisation douce : on cale le 99,5e centile sur 255
+          // Soft normalization: map the 99.5th percentile to 255
           const sorted = [...out].sort((a, b) => a - b)
           const ref = Math.max(sorted[Math.floor(sorted.length * 0.995)] ?? 1, 1)
           const res = new Uint8Array(out.length)
@@ -277,7 +278,7 @@ export async function waveform(videoPath: string): Promise<Waveform> {
 }
 
 /* ------------------------------------------------------------------ */
-/* Détection NVENC */
+/* NVENC detection */
 
 let encoderInfo: EncoderInfo | null = null
 

@@ -1,3 +1,5 @@
+import type { Lang } from './i18n'
+
 export type ExportMode = 'precise' | 'fast'
 export type ExportQuality = 'high' | 'balanced' | 'light'
 export type AudioMode = 'all' | 'first' | 'mix'
@@ -6,12 +8,12 @@ export type EncoderPref = 'auto' | 'nvenc' | 'cpu'
 export type Region = 'eu' | 'na' | 'ap' | 'kr' | 'latam' | 'br'
 
 export interface RiotAccount {
-  /** Pseudo#TAG tel que renvoyé par Riot (bonne casse) */
+  /** Name#TAG as returned by Riot (correct casing) */
   riotId: string
   puuid: string | null
   region: Region
   level: number | null
-  /** id de la carte de joueur (pour l'avatar) */
+  /** player card id (for the avatar) */
   card: string | null
   verified: boolean
 }
@@ -19,7 +21,7 @@ export interface RiotAccount {
 export interface KeyTest {
   ok: boolean
   error?: string
-  /** requêtes autorisées sur la fenêtre la plus courte (en-tête X-RateLimit-Limit) */
+  /** requests allowed in the shortest window (X-RateLimit-Limit header) */
   limit: number | null
   remaining: number | null
   resetIn: number | null
@@ -41,47 +43,55 @@ export interface Settings {
   audio: AudioMode
   encoder: EncoderPref
   volume: number
-  /** Comptes Riot vérifiés via HenrikDev, le premier est celui par défaut */
+  /** Riot accounts verified through HenrikDev, the first one is the default */
   accounts: RiotAccount[]
-  /** Région par défaut (utilisée si un compte n'a pas encore été vérifié) */
+  /** Default region (used when an account hasn't been verified yet) */
   region: Region
-  /** Nombre max de requêtes HenrikDev par minute (dépend du type de clé) */
+  /** Max HenrikDev requests per minute (depends on the key type) */
   rateLimit: number
-  /** Secondes ajoutées avant le premier kill / après le dernier pour les clips auto */
+  /** Seconds added before the first kill / after the last one for auto clips */
   preRoll: number
   postRoll: number
-  /** Vrai si une clé HenrikDev est enregistrée (la clé elle-même reste côté système, chiffrée) */
+  /** True when a HenrikDev key is saved (the key itself stays on the system side, encrypted) */
   hasHenrikKey: boolean
-  /** En dessous de cette durée (minutes), une rec est « courte » : jamais liée toute seule */
+  /** Below this length (minutes) a recording is "short": never linked automatically */
   minLinkMinutes: number
-  /** Masquer les recs courtes dans la bibliothèque */
+  /** Hide short recordings in the library */
   hideShortRecs: boolean
-  /** Pilotage d'OBS */
+  /** OBS control */
   obs: ObsSettings
-  /** Vrai si un mot de passe OBS est enregistré (chiffré) */
+  /** True when an OBS password is saved (encrypted) */
   hasObsPassword: boolean
-  /** La croix cache Frag dans la zone de notification au lieu de quitter */
+  /** The close button hides Frag in the system tray instead of quitting */
   closeToTray: boolean
-  /** Lancer Frag (caché) à l'ouverture de session Windows */
+  /** Start Frag (hidden) when signing in to Windows */
   launchAtLogin: boolean
-  /** Notifications Windows (fin de game, OBS pas lancé, exports finis) */
+  /** Windows notifications (end of game, OBS not running, exports done) */
   notifications: boolean
-  /** La bulle « Frag tourne toujours » a déjà été montrée */
+  /** The "Frag is still running" hint was already shown */
   trayHintShown: boolean
+  /** Interface language */
+  language: Lang
+  /** Keyboard layout used for shortcuts that depend on symbol keys */
+  keyboardLayout: KeyboardLayout
+  /** Last version whose "What's new" was seen (null on a fresh install) */
+  lastSeenVersion: string | null
 }
 
+export type KeyboardLayout = 'qwerty' | 'azerty'
+
 export interface ObsSettings {
-  /** Démarrer / arrêter l'enregistrement tout seul selon Valorant */
+  /** Start / stop recording automatically based on Valorant */
   enabled: boolean
   host: string
   port: number
-  /** quand démarrer : sélection d'agent ou chargement de la game */
+  /** when to start: agent select or game loading */
   startOn: 'pregame' | 'ingame'
-  /** secondes d'attente après la fin de la game avant d'arrêter */
+  /** seconds to wait after the game ends before stopping */
   stopDelay: number
-  /** lier tout seul la rec à son match une fois la game finie */
+  /** link the recording to its match once the game is over */
   autoLink: boolean
-  /** renommer la rec à la fin de la game (map · mode · score) */
+  /** rename the recording when the game ends (map · mode · score) */
   renameRecs: boolean
 }
 
@@ -94,13 +104,13 @@ export interface AutoRecStatus {
   obsError: string | null
   obsVersion: string | null
   recording: boolean
-  /** l'enregistrement en cours a été lancé par Frag */
+  /** the current recording was started by Frag */
   ownRecording: boolean
   recStartedAt: number | null
   game: GameState
-  /** message lisible pour la dernière action (« Rec lancée », « Rec arrêtée »…) */
+  /** readable message for the last action ("Recording started", "Recording stopped"…) */
   last: string | null
-  /** arrêt prévu (epoch ms) après la fin de la game */
+  /** planned stop (epoch ms) after the game ends */
   stopAt: number | null
 }
 
@@ -134,7 +144,7 @@ export interface VideoEntry {
   mtime: number
   clipCount: number
   match: MatchSummary | null
-  /** durée en secondes (null si illisible, par exemple pendant l'enregistrement) */
+  /** length in seconds (null if unreadable, e.g. while still recording) */
   duration: number | null
 }
 
@@ -147,14 +157,14 @@ export interface MatchPlayer {
   team: string
   agent: string
   agentId?: string | null
-  /** numéro de rang compétitif (0-27) */
+  /** competitive rank number (0-27) */
   tier?: number | null
   kills: number
   deaths: number
   assists: number
   score: number
   rank: string | null
-  /** dégâts infligés sur le match */
+  /** damage dealt over the match */
   damage?: number | null
   headshots?: number | null
   bodyshots?: number | null
@@ -162,11 +172,11 @@ export interface MatchPlayer {
 }
 
 export interface MatchKill {
-  /** index de round 0-based */
+  /** 0-based round index */
   round: number
-  /** secondes depuis le début du match */
+  /** seconds since the match started */
   tMatch: number
-  /** secondes depuis le début du round (barrières) */
+  /** seconds since the round started (barriers) */
   tRound: number
   killer: string
   victim: string
@@ -183,7 +193,7 @@ export interface MatchRound {
   winningTeam: string
   result: string
   ceremony: string
-  /** temps de match (s) où le round démarre (barrières), null si inconnu */
+  /** match time (s) when the round starts (barriers), null if unknown */
   start: number | null
   plant: { tRound: number; site: string; player: string } | null
   defuse: { tRound: number; player: string } | null
@@ -204,7 +214,7 @@ export interface MatchData {
   region: string
   /** epoch ms */
   startedAt: number
-  /** secondes */
+  /** seconds */
   length: number
   players: MatchPlayer[]
   teams: MatchTeam[]
@@ -214,50 +224,50 @@ export interface MatchData {
 
 export interface SyncAnchor {
   id: string
-  /** temps de match (s) */
+  /** match time (s) */
   matchTime: number
-  /** temps vidéo (s) */
+  /** video time (s) */
   videoTime: number
   label: string
 }
 
 export interface MatchLink {
   match: MatchData
-  /** joueur suivi */
+  /** tracked player */
   puuid: string
-  /** décalage auto estimé (temps de match - temps vidéo), à partir de l'heure de la rec */
+  /** estimated auto offset (match time - video time), from the recording's time */
   autoOffset: number | null
   anchors: SyncAnchor[]
 }
 
 export interface RecTimes {
-  /** epoch ms du début de l'enregistrement */
+  /** recording start, epoch ms */
   start: number
   end: number
   source: 'obs' | 'birthtime' | 'filename' | 'mtime'
-  /** fins de round notées pendant la game (enregistrement auto) */
+  /** round ends noted during the game (auto-record) */
   rounds?: RecRound[]
 }
 
 export interface AutoSyncResult {
-  /** décalage trouvé (temps de match - temps vidéo) */
+  /** offset found (match time - video time) */
   offset: number
   /** 0..1 */
   confidence: number
-  /** kills utilisés pour le calcul */
+  /** kills used for the computation */
   kills: number
   score: number
 }
 
 export interface MatchCandidate {
   match: MatchData
-  /** recouvrement entre la rec et le match, 0..1 (rapporté au plus court des deux) */
+  /** overlap between the recording and the match, 0..1 (relative to the shorter of the two) */
   overlap: number
-  /** part du match filmée par la rec, 0..1 */
+  /** share of the match covered by the recording, 0..1 */
   coverage: number
-  /** durée de la rec en secondes */
+  /** recording length in seconds */
   recSeconds: number
-  /** autres recs déjà liées à ce match (chemins) */
+  /** other recordings already linked to this match (paths) */
   linkedElsewhere: string[]
 }
 
@@ -286,15 +296,15 @@ export interface Clip {
 export interface Marker {
   id: string
   time: number
-  /** texte facultatif (ex. « Fin du round 7 · 4-3 », posé pendant la game) */
+  /** optional text (e.g. "End of round 7 · 4-3", added during the game) */
   label?: string
 }
 
-/** Fin de round vue pendant l'enregistrement (score lu sur le client Riot) */
+/** Round end seen while recording (score read from the Riot client) */
 export interface RecRound {
-  /** index 0-based du round qui vient de se terminer */
+  /** 0-based index of the round that just ended */
   round: number
-  /** temps dans la rec (s) */
+  /** time in the recording (s) */
   t: number
   ally: number
   enemy: number
@@ -311,12 +321,12 @@ export interface Project {
   clips: Clip[]
   markers: Marker[]
   match?: MatchLink | null
-  /** notes du mode Revoir, par passage (clé stable) */
+  /** Review mode notes, per moment (stable key) */
   review?: Record<string, ReviewNote>
   updatedAt: number
 }
 
-/** Un match lié, tel que vu par la page Stats */
+/** A linked match, as seen by the Stats page */
 export interface StatsEntry {
   videoPath: string
   link: MatchLink
@@ -345,26 +355,26 @@ export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'canceled'
 
 export type CardStyle = 'none' | 'classic' | 'bar' | 'slab' | 'cinema' | 'count' | 'hud'
 
-/** Comment un calque de carton entre à l'écran */
+/** How a title card layer enters the screen */
 export type CardAnim = 'fade' | 'slide' | 'rise' | 'barTop' | 'barBottom'
 
 /**
- * Un morceau de carton titre, dessiné par l'interface (repère 1920×1080)
- * puis incrusté et animé par ffmpeg au début du clip.
+ * A piece of a title card, drawn by the UI (1920×1080 canvas)
+ * then overlaid and animated by ffmpeg at the start of the clip.
  */
 export interface CardLayer {
-  /** image PNG transparente ; absente pour les bandes noires (barTop / barBottom) */
+  /** transparent PNG; missing for the letterbox bars (barTop / barBottom) */
   png?: Uint8Array
   x: number
   y: number
   w: number
   h: number
-  /** centré horizontalement dans l'image (x ignoré) */
+  /** horizontally centered in the frame (x ignored) */
   center?: boolean
   anim: CardAnim
-  /** apparition (s depuis le début du clip) */
+  /** appears at (s from the clip start) */
   delay: number
-  /** disparition (s depuis le début du clip), -1 = jusqu'à la fin du clip */
+  /** disappears at (s from the clip start), -1 = until the end of the clip */
   until: number
 }
 
@@ -372,12 +382,12 @@ export interface MontageItem {
   videoPath: string
   start: number
   end: number
-  /** carton titre déjà dessiné (vide = aucun) */
+  /** title card already drawn (empty = none) */
   layers: CardLayer[]
 }
 
 export interface MontageOptions {
-  /** durée du fondu entre deux clips, 0 = coupe sèche */
+  /** crossfade length between two clips, 0 = hard cut */
   transition: number
   name: string
 }
@@ -403,7 +413,7 @@ export interface EncoderInfo {
   nvenc: boolean
 }
 
-/* ------------------------------------------------------------------ Assets Valorant (valorant-api.com) */
+/* ------------------------------------------------------------------ Valorant assets (valorant-api.com) */
 
 export interface AgentAsset {
   uuid: string
@@ -418,7 +428,7 @@ export interface AgentAsset {
 export interface MapAsset {
   uuid: string
   name: string
-  /** chemin interne du jeu (/Game/Maps/Ascent/Ascent), pour reconnaître la map vue par le client Riot */
+  /** in-game path (/Game/Maps/Ascent/Ascent), to recognise the map reported by the Riot client */
   path?: string | null
   splash: string | null
   listView: string | null
@@ -443,25 +453,25 @@ export interface ValAssets {
   maps: MapAsset[]
   weapons: WeaponAsset[]
   tiers: TierAsset[]
-  /** icône du spike (équipement « Spike » si dispo, sinon icône du mode Spike Rush) */
+  /** spike icon (the "Spike" gear when available, else the Spike Rush mode icon) */
   spike?: string | null
   fetchedAt: number
 }
 
-/* ------------------------------------------------------------------ Mises à jour (releases GitHub) */
+/* ------------------------------------------------------------------ Updates (GitHub releases) */
 
 export interface UpdateStatus {
-  /** version installée */
+  /** installed version */
   current: string
   /**
-   * dev : pas de mise à jour en mode développement
-   * idle : pas encore vérifié · checking : vérification · none : déjà à jour
-   * downloading : nouvelle version en cours de téléchargement · ready : prête, s'installe au redémarrage
+   * dev: no updates in development builds
+   * idle: not checked yet · checking: checking · none: already up to date
+   * downloading: new version downloading · ready: downloaded, installs on restart
    */
   state: 'dev' | 'idle' | 'checking' | 'none' | 'downloading' | 'ready' | 'error'
-  /** version trouvée sur GitHub */
+  /** version found on GitHub */
   version: string | null
-  /** 0 à 1 pendant le téléchargement */
+  /** 0 to 1 while downloading */
   progress: number
   error: string | null
   checkedAt: number | null

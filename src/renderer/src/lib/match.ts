@@ -1,8 +1,9 @@
 import type { Clip, MatchKill, MatchLink, SyncAnchor } from '@shared/types'
+import { locale, tr } from '@shared/i18n'
 
-/* ------------------------------------------------------------------ Synchro temps de match ↔ temps vidéo */
+/* ------------------------------------------------------------------ Match time ↔ video time sync */
 
-/** Ancre active pour un instant du match : la dernière calée avant lui (gère les pauses techniques en recalant plus loin). */
+/** Active anchor for a match time: the last one set before it (handles tech pauses by re-syncing further on). */
 export function anchorFor(link: MatchLink, matchTime: number): SyncAnchor | null {
   if (!link.anchors.length) return null
   const sorted = [...link.anchors].sort((a, b) => a.matchTime - b.matchTime)
@@ -11,7 +12,7 @@ export function anchorFor(link: MatchLink, matchTime: number): SyncAnchor | null
   return best
 }
 
-/** Décalage (temps de match - temps vidéo) à utiliser pour un instant du match */
+/** Offset (match time - video time) to use at a given match time */
 export function offsetAt(link: MatchLink, matchTime: number): number {
   const a = anchorFor(link, matchTime)
   if (a) return a.matchTime - a.videoTime
@@ -20,7 +21,7 @@ export function offsetAt(link: MatchLink, matchTime: number): number {
 
 export const toVideo = (link: MatchLink, matchTime: number): number => matchTime - offsetAt(link, matchTime)
 
-/** Instant du match correspondant à un instant vidéo (approx. : utilise l'ancre la plus proche) */
+/** Match time for a video time (approximate: uses the closest anchor) */
 export function toMatch(link: MatchLink, videoTime: number): number {
   if (!link.anchors.length) return videoTime + (link.autoOffset ?? 0)
   let best = link.anchors[0]
@@ -28,15 +29,15 @@ export function toMatch(link: MatchLink, videoTime: number): number {
   return videoTime + best.matchTime - best.videoTime
 }
 
-/* ------------------------------------------------------------------ Analyse des rounds */
+/* ------------------------------------------------------------------ Round analysis */
 
 export interface RoundInfo {
   index: number
   n: number
   won: boolean | null
-  /** score de mon équipe après ce round */
+  /** my team's score after this round */
   score: string
-  /** temps vidéo */
+  /** video time */
   start: number | null
   end: number | null
   myKills: MatchKill[]
@@ -53,9 +54,9 @@ export interface TLEvent {
   matchTime: number
   round: number
   label: string
-  /** index dans match.kills (kills et morts) */
+  /** index in match.kills (kills and deaths) */
   killIndex?: number
-  /** l'autre joueur : la victime pour un kill, le tueur pour une mort */
+  /** the other player: the victim for a kill, the killer for a death */
   agentId?: string | null
   agent?: string | null
   weaponId?: string | null
@@ -83,7 +84,7 @@ export function analyse(link: MatchLink): { rounds: RoundInfo[]; events: TLEvent
     if (isWin === true) won++
     else if (isWin === false) lost++
 
-    // Clutch : je reste seul en vie dans mon équipe face à au moins un ennemi, et on gagne le round
+    // Clutch: I'm the last one alive on my team against at least one enemy, and we win the round
     let clutch: number | null = null
     if (team && isWin) {
       const alive = new Map<string, Set<string>>()
@@ -146,7 +147,7 @@ export function analyse(link: MatchLink): { rounds: RoundInfo[]; events: TLEvent
         t: toVideo(link, k.tMatch),
         matchTime: k.tMatch,
         round: i,
-        label: `R${i + 1} · Mort (${names.get(k.killer) ?? '?'}${k.weapon ? `, ${k.weapon}` : ''})`
+        label: `R${i + 1} · ${tr('Death', 'Mort')} (${names.get(k.killer) ?? '?'}${k.weapon ? `, ${k.weapon}` : ''})`
       })
     }
     if (startM !== null && r.plant) {
@@ -157,7 +158,7 @@ export function analyse(link: MatchLink): { rounds: RoundInfo[]; events: TLEvent
         t: toVideo(link, m),
         matchTime: m,
         round: i,
-        label: `R${i + 1} · Spike posé (${r.plant.site})${r.plant.player === puuid ? ' par toi' : ''}`
+        label: `R${i + 1} · ${tr('Spike planted', 'Spike posé')} (${r.plant.site})${r.plant.player === puuid ? tr(' by you', ' par toi') : ''}`
       })
     }
     if (startM !== null && r.defuse) {
@@ -168,7 +169,7 @@ export function analyse(link: MatchLink): { rounds: RoundInfo[]; events: TLEvent
         t: toVideo(link, m),
         matchTime: m,
         round: i,
-        label: `R${i + 1} · Spike désamorcé${r.defuse.player === puuid ? ' par toi' : ''}`
+        label: `R${i + 1} · ${tr('Spike defused', 'Spike désamorcé')}${r.defuse.player === puuid ? tr(' by you', ' par toi') : ''}`
       })
     }
   })
@@ -177,7 +178,7 @@ export function analyse(link: MatchLink): { rounds: RoundInfo[]; events: TLEvent
   return { rounds, events }
 }
 
-/* ------------------------------------------------------------------ Clips automatiques */
+/* ------------------------------------------------------------------ Auto clips */
 
 export interface AutoClipOptions {
   pre: number
@@ -201,7 +202,7 @@ export function autoClips(
     const keep = k >= opts.minKills || (opts.clutches && r.clutch !== null && k > 0)
     if (!keep || !k) continue
 
-    // Kills espacés de plus de 15 s → clips séparés
+    // Kills more than 15 s apart → separate clips
     const groups: MatchKill[][] = []
     for (const kill of r.myKills) {
       const g = groups[groups.length - 1]
@@ -230,5 +231,5 @@ export function autoClips(
 }
 
 export function fmtDate(ms: number): string {
-  return new Date(ms).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return new Date(ms).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }

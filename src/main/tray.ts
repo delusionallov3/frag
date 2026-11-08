@@ -2,9 +2,12 @@ import { app, Menu, nativeImage, Tray } from 'electron'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import type { AutoRecStatus } from '@shared/types'
+import { tr } from '@shared/i18n'
 
 let tray: Tray | null = null
 let lastLabel = ''
+let lastStatus: AutoRecStatus | null = null
+
 export interface TrayHandlers {
   show: () => void
   quit: () => void
@@ -15,12 +18,12 @@ export interface TrayHandlers {
 
 let handlers: TrayHandlers | null = null
 let recording = false
-/** version téléchargée, prête à installer */
+/** downloaded version, ready to install */
 let updateReady: string | null = null
 let idleIcon: Electron.NativeImage | null = null
 let recIcon: Electron.NativeImage | null = null
 
-/** Icône : dans resources/ une fois installée (extraResources), sinon dans build/ en dev */
+/** Icon: in resources/ once installed (extraResources), in build/ in dev */
 export function iconPath(): string {
   const file = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
   const packaged = join(process.resourcesPath, file)
@@ -28,7 +31,7 @@ export function iconPath(): string {
   return join(__dirname, '../../build', file)
 }
 
-/** Icône d'origine + point rouge en bas à droite, dessiné pixel par pixel (pas de fichier en plus à livrer) */
+/** Original icon + a red dot bottom right, drawn pixel by pixel (no extra file to ship) */
 function withRedDot(base: Electron.NativeImage, size: number): Electron.NativeImage {
   const img = base.resize({ width: size, height: size, quality: 'best' })
   const buf = Buffer.from(img.toBitmap()) // BGRA
@@ -41,7 +44,7 @@ function withRedDot(base: Electron.NativeImage, size: number): Electron.NativeIm
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy)
       if (d > r + ring) continue
       const i = (y * size + x) * 4
-      // bord sombre pour que le point ressorte sur l'icône, puis rouge vif
+      // dark ring so the dot stands out on the icon, then bright red
       const [b, g, rr] = d > r ? [13, 11, 11] : [68, 68, 239]
       const a = Math.min(1, r + ring + 0.5 - d)
       buf[i] = Math.round(b * a + buf[i] * (1 - a))
@@ -68,12 +71,13 @@ function buildRecIcon(): Electron.NativeImage {
 }
 
 function recLabel(s: AutoRecStatus | null): string {
-  if (!s || !s.enabled) return 'Enregistrement auto : désactivé'
-  if (s.recording) return s.ownRecording ? '● Rec en cours' : '● OBS enregistre'
-  if (s.obs === 'auth') return 'Enregistrement auto : mot de passe OBS refusé'
-  if (s.obs !== 'ready') return 'Enregistrement auto : OBS non connecté'
-  if (s.stopAt) return 'Enregistrement auto : arrêt de la rec imminent'
-  return 'Enregistrement auto : en attente d’une game'
+  const auto = tr('Auto-record', 'Enregistrement auto')
+  if (!s || !s.enabled) return `${auto}: ${tr('off', 'désactivé')}`
+  if (s.recording) return s.ownRecording ? `● ${tr('Recording', 'Rec en cours')}` : `● ${tr('OBS is recording', 'OBS enregistre')}`
+  if (s.obs === 'auth') return `${auto}: ${tr('OBS password rejected', 'mot de passe OBS refusé')}`
+  if (s.obs !== 'ready') return `${auto}: ${tr('OBS not connected', 'OBS non connecté')}`
+  if (s.stopAt) return `${auto}: ${tr('stopping soon', 'arrêt de la rec imminent')}`
+  return `${auto}: ${tr('waiting for a game', 'en attente d’une game')}`
 }
 
 function rebuild(label: string): void {
@@ -81,17 +85,22 @@ function rebuild(label: string): void {
   const h = handlers
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Ouvrir Frag', click: () => h.show() },
+      { label: tr('Open Frag', 'Ouvrir Frag'), click: () => h.show() },
       ...(updateReady
-        ? ([{ label: `Redémarrer pour installer la ${updateReady}`, click: () => h.installUpdate() }] as const)
+        ? ([
+            {
+              label: tr(`Restart to install ${updateReady}`, `Redémarrer pour installer la ${updateReady}`),
+              click: () => h.installUpdate()
+            }
+          ] as const)
         : []),
       { type: 'separator' },
       { label, enabled: false },
       { type: 'separator' },
-      { label: 'Ouvrir le dossier des recs', click: () => h.openRecs() },
-      { label: 'Ouvrir le dossier des clips', click: () => h.openClips() },
+      { label: tr('Open recordings folder', 'Ouvrir le dossier des recs'), click: () => h.openRecs() },
+      { label: tr('Open clips folder', 'Ouvrir le dossier des clips'), click: () => h.openClips() },
       { type: 'separator' },
-      { label: 'Quitter', click: () => h.quit() }
+      { label: tr('Quit', 'Quitter'), click: () => h.quit() }
     ])
   )
   tray.setToolTip(label.startsWith('●') ? `Frag · ${label.slice(2)}` : 'Frag')
@@ -105,12 +114,20 @@ export function createTray(opts: TrayHandlers, status: AutoRecStatus | null): vo
   tray = new Tray(idleIcon)
   tray.on('click', () => opts.show())
   tray.on('double-click', () => opts.show())
+  lastStatus = status
   lastLabel = recLabel(status)
   rebuild(lastLabel)
 }
 
-/** À appeler à chaque changement d'état de l'enregistrement auto : ne reconstruit le menu que si le texte change */
+/** Language changed: rebuild the menu */
+export function refreshTray(): void {
+  lastLabel = recLabel(lastStatus)
+  rebuild(lastLabel)
+}
+
+/** Call on every auto-record state change: only rebuilds the menu when its text changes */
 export function updateTrayStatus(status: AutoRecStatus): void {
+  lastStatus = status
   if (tray && status.recording !== recording) {
     recording = status.recording
     if (recording && !recIcon) recIcon = buildRecIcon()

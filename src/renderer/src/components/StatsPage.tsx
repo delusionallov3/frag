@@ -4,15 +4,16 @@ import type { StatsEntry } from '@shared/types'
 import { useApp } from '../store'
 import { useLookup } from '../lib/assets'
 import { myTeam } from '../lib/match'
-import { insights, REVIEW_TAGS } from '../lib/review'
+import { GOOD_TAG, insights, REVIEW_TAGS, tagLabel } from '../lib/review'
+import { num, tr } from '@shared/i18n'
 import VImg from './VImg'
 
 type Period = '7' | '30' | 'all'
 
-/** Noms affichés des modes (HenrikDev renvoie les noms anglais du jeu) */
-const MODE_LABELS: Record<string, string> = {
-  competitive: 'Compétition',
-  unrated: 'Non classé',
+/** Display names for modes (HenrikDev returns the game's English names) */
+const modeLabels = (): Record<string, string> => ({
+  competitive: tr('Competitive', 'Compétition'),
+  unrated: tr('Unrated', 'Non classé'),
   swiftplay: 'Swiftplay',
   'spike rush': 'Spike Rush',
   deathmatch: 'Deathmatch',
@@ -21,13 +22,13 @@ const MODE_LABELS: Record<string, string> = {
   skirmish: 'Skirmish',
   premier: 'Premier',
   replication: 'Replication',
-  custom: 'Personnalisée',
-  'custom game': 'Personnalisée'
-}
-/** Ordre d'affichage des filtres */
+  custom: tr('Custom', 'Personnalisée'),
+  'custom game': tr('Custom', 'Personnalisée')
+})
+/** Filter display order */
 const MODE_ORDER = ['competitive', 'unrated', 'swiftplay', 'premier', 'spike rush', 'skirmish', 'team deathmatch', 'deathmatch', 'escalation']
 const modeKey = (mode: string): string => mode.trim().toLowerCase()
-const modeLabel = (key: string, raw: string): string => MODE_LABELS[key] ?? raw
+const modeLabel = (key: string, raw: string): string => modeLabels()[key] ?? raw
 
 const MODE_PREF = 'frag.stats.mode'
 function readModePref(): string | null {
@@ -41,7 +42,7 @@ function writeModePref(v: string): void {
   try {
     localStorage.setItem(MODE_PREF, v)
   } catch {
-    /* pas grave */
+    /* not a big deal */
   }
 }
 
@@ -84,7 +85,7 @@ function toGame(e: StatsEntry): Game | null {
     e,
     date: m.startedAt,
     mode: m.mode,
-    modeKey: modeKey(m.mode || 'Partie'),
+    modeKey: modeKey(m.mode || 'Game'),
     map: m.map,
     mapId: m.mapId ?? null,
     agent: me.agent,
@@ -110,8 +111,8 @@ function toGame(e: StatsEntry): Game | null {
 }
 
 const sum = (gs: Game[], f: (g: Game) => number): number => gs.reduce((n, g) => n + f(g), 0)
-const kd = (k: number, d: number): string => (d ? k / d : k).toFixed(2).replace('.', ',')
-const pct = (a: number, b: number): string => (b ? `${Math.round((a / b) * 100)} %` : '–')
+const kd = (k: number, d: number): string => num(d ? k / d : k, 2)
+const pct = (a: number, b: number): string => (b ? tr(`${Math.round((a / b) * 100)}%`, `${Math.round((a / b) * 100)} %`) : '–')
 
 function adr(gs: Game[]): string {
   const withDmg = gs.filter((g) => g.damage !== null && g.rounds)
@@ -125,7 +126,7 @@ function hsPct(gs: Game[]): string {
   return pct(sum(w, (g) => g.hs ?? 0), sum(w, (g) => g.shots ?? 0))
 }
 
-/** Courbe du K/D game après game : le graphique principal de la page */
+/** K/D game after game: the page's main chart */
 function KdChart({ games }: { games: Game[] }): JSX.Element {
   const W = 760
   const H = 240
@@ -136,7 +137,7 @@ function KdChart({ games }: { games: Game[] }): JSX.Element {
   const y = (v: number): number => P.t + (1 - v / max) * (H - P.t - P.b)
   const ticks = Array.from({ length: Math.floor(max / 0.5) + 1 }, (_, i) => i * 0.5).filter((v) => v % 1 === 0 || max <= 2)
   const path = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
-  // moyenne glissante sur 5 games
+  // 5-game moving average
   const avg = values.map((_, i) => {
     const s = values.slice(Math.max(0, i - 4), i + 1)
     return s.reduce((a, b) => a + b, 0) / s.length
@@ -149,7 +150,7 @@ function KdChart({ games }: { games: Game[] }): JSX.Element {
         <g key={t}>
           <line x1={P.l} x2={W - P.r} y1={y(t)} y2={y(t)} className={t === 1 ? 'kd-one' : 'kd-grid'} />
           <text x={P.l - 8} y={y(t) + 4} className="kd-label" textAnchor="end">
-            {t.toFixed(1).replace('.', ',')}
+            {num(t)}
           </text>
         </g>
       ))}
@@ -180,7 +181,7 @@ function GroupTable({ title, rows }: { title: string; rows: { key: string; icon?
         <div className="st-tr is-head">
           <span />
           <span>Games</span>
-          <span>Victoires</span>
+          <span>{tr('Wins', 'Victoires')}</span>
           <span>K/D</span>
           <span>ADR</span>
         </div>
@@ -196,7 +197,7 @@ function GroupTable({ title, rows }: { title: string; rows: { key: string; icon?
               <span>{r.gs.length}</span>
               <span className="st-wr">
                 <i style={{ width: `${Math.round(wr * 100)}%` }} />
-                <em>{Math.round(wr * 100)} %</em>
+                <em>{pct(w, r.gs.length)}</em>
               </span>
               <span>{kd(sum(r.gs, (g) => g.kills), sum(r.gs, (g) => g.deaths))}</span>
               <span>{adr(r.gs)}</span>
@@ -225,7 +226,7 @@ export default function StatsPage(): JSX.Element {
     return all.filter((g) => g.date >= from)
   }, [all, period])
 
-  // Modes présents sur la période, avec leur nombre de games
+  // Modes played in the period, with their game count
   const modes = useMemo(() => {
     const m = new Map<string, { key: string; label: string; n: number }>()
     for (const g of inPeriod) {
@@ -237,7 +238,7 @@ export default function StatsPage(): JSX.Element {
     return [...m.values()].sort((a, b) => rank(a.key) - rank(b.key) || b.n - a.n)
   }, [inPeriod])
 
-  // Par défaut : la compétition s'il y en a, sinon tous les modes
+  // Default: competitive if there is any, otherwise all modes
   const [modePick, setModePick] = useState<string | null>(readModePref())
   const mode =
     modePick === 'all' || (modePick && modes.some((x) => x.key === modePick))
@@ -287,8 +288,13 @@ export default function StatsPage(): JSX.Element {
         <div className="empty-icon">
           <BarChart3 />
         </div>
-        <h1>Pas encore de stats</h1>
-        <p>Lie tes recs à leurs matchs (onglet Match dans l’éditeur) : chaque game liée alimente cette page.</p>
+        <h1>{tr('No stats yet', 'Pas encore de stats')}</h1>
+        <p>
+          {tr(
+            'Link your recordings to their matches (Match tab in the editor): every linked game feeds this page.',
+            'Lie tes recs à leurs matchs (onglet Match dans l’éditeur) : chaque game liée alimente cette page.'
+          )}
+        </p>
       </div>
     )
   }
@@ -314,16 +320,16 @@ export default function StatsPage(): JSX.Element {
         <div>
           <h1>Stats</h1>
           <span className="library-counts">
-            {games.length} {games.length > 1 ? 'games liées' : 'game liée'}
-            {mode !== 'all' && ` en ${modes.find((x) => x.key === mode)?.label ?? mode}`}
+            {games.length} {games.length === 1 ? tr('linked game', 'game liée') : tr('linked games', 'games liées')}
+            {mode !== 'all' && ` ${tr('in', 'en')} ${modes.find((x) => x.key === mode)?.label ?? mode}`}
           </span>
         </div>
         <div className="segmented">
           {(
             [
-              ['7', '7 jours'],
-              ['30', '30 jours'],
-              ['all', 'Tout']
+              ['7', tr('7 days', '7 jours')],
+              ['30', tr('30 days', '30 jours')],
+              ['all', tr('All time', 'Tout')]
             ] as [Period, string][]
           ).map(([p, l]) => (
             <button key={p} className={period === p ? 'is-on' : ''} onClick={() => setPeriod(p)}>
@@ -336,7 +342,7 @@ export default function StatsPage(): JSX.Element {
       {modes.length > 1 && (
         <div className="st-modes">
           <button className={mode === 'all' ? 'is-on' : ''} onClick={() => pickMode('all')}>
-            Tous les modes <span>{inPeriod.length}</span>
+            {tr('All modes', 'Tous les modes')} <span>{inPeriod.length}</span>
           </button>
           {modes.map((x) => (
             <button key={x.key} className={mode === x.key ? 'is-on' : ''} onClick={() => pickMode(x.key)}>
@@ -349,100 +355,102 @@ export default function StatsPage(): JSX.Element {
       {!games.length ? (
         <div className="empty-inline">
           <div>
-            <strong>Aucune game sur cette période</strong>
-            <span>Élargis la période pour voir tes stats.</span>
+            <strong>{tr('No games in this period', 'Aucune game sur cette période')}</strong>
+            <span>{tr('Pick a longer period to see your stats.', 'Élargis la période pour voir tes stats.')}</span>
           </div>
         </div>
       ) : (
         <>
           <div className="st-cards">
             <div className="st-stat">
-              <span>Victoires</span>
+              <span>{tr('Wins', 'Victoires')}</span>
               <b>{pct(wins, wins + losses)}</b>
               <em>
-                {wins} V · {losses} D
+                {wins} {tr('W', 'V')} · {losses} {tr('L', 'D')}
               </em>
             </div>
             <div className="st-stat">
               <span>K/D</span>
               <b>{kd(K, D)}</b>
               <em>
-                {(K / n).toFixed(1).replace('.', ',')} / {(D / n).toFixed(1).replace('.', ',')} /{' '}
-                {(A / n).toFixed(1).replace('.', ',')} par game
+                {num(K / n)} / {num(D / n)} / {num(A / n)} {tr('per game', 'par game')}
               </em>
             </div>
             <div className="st-stat">
               <span>ADR</span>
               <b>{adr(games)}</b>
-              <em>Dégâts par round</em>
+              <em>{tr('Damage per round', 'Dégâts par round')}</em>
             </div>
             <div className="st-stat">
               <span>Headshots</span>
               <b>{hsPct(games)}</b>
-              <em>Des balles qui touchent</em>
+              <em>{tr('Of shots that hit', 'Des balles qui touchent')}</em>
             </div>
           </div>
 
           <div className="st-main">
             <div className="st-card st-chart">
               <div className="st-card-head">
-                K/D game après game
+                {tr('K/D game by game', 'K/D game après game')}
                 <span className="st-legend">
-                  <i className="is-win" /> victoire <i className="is-loss" /> défaite <i className="is-avg" /> moyenne sur 5
+                  <i className="is-win" /> {tr('win', 'victoire')} <i className="is-loss" /> {tr('loss', 'défaite')}{' '}
+                  <i className="is-avg" /> {tr('5-game average', 'moyenne sur 5')}
                 </span>
               </div>
               <KdChart games={games} />
             </div>
 
             <div className="st-card st-side">
-              <div className="st-card-head">Duels et rounds</div>
+              <div className="st-card-head">{tr('Duels and rounds', 'Duels et rounds')}</div>
               <div className="st-kv">
                 <span>First bloods</span>
                 <b>{fb}</b>
               </div>
               <div className="st-kv">
-                <span>Premières morts</span>
+                <span>{tr('First deaths', 'Premières morts')}</span>
                 <b className={fd > fb ? 'is-bad' : ''}>{fd}</b>
               </div>
               <div className="st-kv">
-                <span>Morts non tradées</span>
+                <span>{tr('Untraded deaths', 'Morts non tradées')}</span>
                 <b>{pct(untraded, deathsAll)}</b>
               </div>
               <div className="st-kv">
-                <span>Trades faits</span>
+                <span>{tr('Trades made', 'Trades faits')}</span>
                 <b>{trades}</b>
               </div>
               <div className="st-kv">
-                <span>Clutchs gagnés</span>
+                <span>{tr('Clutches won', 'Clutchs gagnés')}</span>
                 <b>
                   {cw} / {cw + cl}
                 </b>
               </div>
               <div className="st-kv">
-                <span>Rounds perdus après first blood</span>
+                <span>{tr('Rounds lost after first blood', 'Rounds perdus après first blood')}</span>
                 <b>{lafb}</b>
               </div>
             </div>
           </div>
 
           <div className="st-grid">
-            <GroupTable title="Par agent" rows={byAgent} />
-            <GroupTable title="Par map" rows={byMap} />
+            <GroupTable title={tr('By agent', 'Par agent')} rows={byAgent} />
+            <GroupTable title={tr('By map', 'Par map')} rows={byMap} />
           </div>
 
           <div className="st-grid">
             <div className="st-card">
-              <div className="st-card-head">Tes erreurs notées</div>
+              <div className="st-card-head">{tr('Your tagged mistakes', 'Tes erreurs notées')}</div>
               {tags.length === 0 ? (
                 <p className="st-empty">
-                  Dans l’onglet Revoir de l’éditeur, tague tes morts (« Peek seul », « Mauvais placement »…). Les plus
-                  fréquentes apparaîtront ici.
+                  {tr(
+                    'In the editor’s Review tab, tag your deaths (“Dry peek”, “Bad positioning”…). The most frequent ones will show up here.',
+                    'Dans l’onglet Revoir de l’éditeur, tague tes morts (« Peek seul », « Mauvais placement »…). Les plus fréquentes apparaîtront ici.'
+                  )}
                 </p>
               ) : (
                 <div className="st-tags">
                   {tags.map(({ t, n: c }) => (
-                    <div key={t} className={`st-tag ${t === 'Bien joué' ? 'is-good' : ''}`}>
-                      <span>{t}</span>
+                    <div key={t} className={`st-tag ${t === GOOD_TAG ? 'is-good' : ''}`}>
+                      <span>{tagLabel(t)}</span>
                       <i style={{ width: `${Math.round((c / tags[0].n) * 100)}%` }} />
                       <b>{c}</b>
                     </div>
@@ -452,7 +460,7 @@ export default function StatsPage(): JSX.Element {
             </div>
 
             <div className="st-card">
-              <div className="st-card-head">Dernières games</div>
+              <div className="st-card-head">{tr('Recent games', 'Dernières games')}</div>
               <div className="st-games">
                 {[...games]
                   .reverse()

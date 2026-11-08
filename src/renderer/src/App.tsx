@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { tr } from '@shared/i18n'
 import { useApp } from './store'
 import { useAssets } from './lib/assets'
 import TitleBar from './components/TitleBar'
@@ -9,6 +10,7 @@ import ExportsDrawer from './components/ExportsDrawer'
 import SettingsModal from './components/SettingsModal'
 import ShortcutsModal from './components/ShortcutsModal'
 import MontageModal from './components/MontageModal'
+import WhatsNewModal from './components/WhatsNewModal'
 import Toast from './components/Toast'
 
 const VIDEO_RE = /\.(mp4|mkv|mov|m4v|webm)$/i
@@ -22,7 +24,16 @@ export default function App(): JSX.Element {
     void useAssets.getState().load()
   }, [init])
 
-  // Clic sur une notification Windows (fin de game, OBS pas lancé)
+  // First launch after an update: show what's new once. A fresh install just records the version.
+  const lastSeen = settings?.lastSeenVersion
+  useEffect(() => {
+    const s = useApp.getState().settings
+    if (!s || s.lastSeenVersion === window.frag.version) return
+    if (s.recsFolder) useApp.getState().setWhatsNewOpen(true)
+    else void useApp.getState().updateSettings({ lastSeenVersion: window.frag.version })
+  }, [lastSeen])
+
+  // Click on a Windows notification (end of game, OBS not running)
   useEffect(() => {
     const offVideo = window.frag.onOpenVideo((p) => openVideo(p))
     const offSettings = window.frag.onOpenSettings(() => useApp.getState().setSettingsOpen(true))
@@ -32,7 +43,7 @@ export default function App(): JSX.Element {
     }
   }, [openVideo])
 
-  // Glisser-déposer une vidéo n'importe où dans la fenêtre
+  // Drag and drop a video anywhere on the window
   useEffect(() => {
     let depth = 0
     const hasFiles = (e: DragEvent): boolean => !!e.dataTransfer?.types.includes('Files')
@@ -66,7 +77,8 @@ export default function App(): JSX.Element {
   }, [openVideo])
 
   return (
-    <div className={`app platform-${window.frag.platform}`}>
+    // Changing the language remounts the UI so every string is rebuilt
+    <div className={`app platform-${window.frag.platform}`} key={settings?.language ?? 'en'}>
       <TitleBar />
       <main className="app-main">
         {!settings ? null : view === 'editor' && videoPath ? (
@@ -81,10 +93,11 @@ export default function App(): JSX.Element {
       <SettingsModal />
       <ShortcutsModal />
       <MontageModal />
+      <WhatsNewModal />
       <Toast />
       {dragging && (
         <div className="drop-overlay">
-          <div className="drop-card">Lâche ta vidéo pour l’ouvrir</div>
+          <div className="drop-card">{tr('Drop your video to open it', 'Lâche ta vidéo pour l’ouvrir')}</div>
         </div>
       )}
     </div>

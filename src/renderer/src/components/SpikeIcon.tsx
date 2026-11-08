@@ -1,7 +1,7 @@
 import { useAssets } from '../lib/assets'
 import VImg from './VImg'
 
-/** Spike : icône officielle via valorant-api.com, dessin de secours si elle n'est pas dispo */
+/** Spike: official icon from valorant-api.com, with a drawn fallback */
 export default function SpikeIcon({ size = 14, className }: { size?: number; className?: string }): JSX.Element {
   const spike = useAssets((s) => s.assets?.spike)
   const drawn = (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, Keyboard, Settings, Download } from 'lucide-react'
+import { ChevronLeft, Keyboard, Settings, Download, Sparkles } from 'lucide-react'
+import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { baseName, fmtDuration, stripExt } from '../lib/format'
 
@@ -12,7 +13,7 @@ export function Logo(): JSX.Element {
   )
 }
 
-/** État du pilotage OBS : visible seulement s'il est activé */
+/** OBS auto-record state: only shown when the feature is on */
 function RecPill(): JSX.Element | null {
   const { autoRec: a, setSettingsOpen } = useApp()
   const [now, setNow] = useState(Date.now())
@@ -25,28 +26,28 @@ function RecPill(): JSX.Element | null {
   if (!a?.enabled) return null
 
   let tone = 'is-idle'
-  let text = 'OBS prêt'
+  let text = tr('OBS ready', 'OBS prêt')
   if (a.obs === 'connecting' || a.obs === 'off') {
-    text = 'Connexion à OBS…'
+    text = tr('Connecting to OBS…', 'Connexion à OBS…')
   } else if (a.obs !== 'ready') {
     tone = 'is-warn'
-    text = a.obs === 'auth' ? 'Mot de passe OBS' : 'OBS déconnecté'
+    text = a.obs === 'auth' ? tr('OBS password', 'Mot de passe OBS') : tr('OBS disconnected', 'OBS déconnecté')
   } else if (a.stopAt) {
     tone = 'is-rec'
-    text = `Arrêt dans ${Math.max(0, Math.ceil((a.stopAt - now) / 1000))} s`
+    text = `${tr('Stopping in', 'Arrêt dans')} ${Math.max(0, Math.ceil((a.stopAt - now) / 1000))} s`
   } else if (a.recording) {
     tone = 'is-rec'
     text = a.recStartedAt ? `REC ${fmtDuration(Math.max(0, (now - a.recStartedAt) / 1000))}` : 'REC'
   } else if (a.game === 'pregame') {
-    text = 'Sélection d’agent'
+    text = tr('Agent select', 'Sélection d’agent')
   } else if (a.game === 'ingame') {
-    text = 'En game'
+    text = tr('In game', 'En game')
   } else if (a.game === 'menus') {
-    text = 'Valorant ouvert'
+    text = tr('Valorant open', 'Valorant ouvert')
   }
   const tip = [a.obsError, a.last, a.obsVersion ? `OBS WebSocket ${a.obsVersion}` : null].filter(Boolean).join('\n')
   return (
-    <button className={`rec-pill ${tone}`} onClick={() => setSettingsOpen(true)} title={tip || 'Enregistrement auto'}>
+    <button className={`rec-pill ${tone}`} onClick={() => setSettingsOpen(true)} title={tip || tr('Auto-record', 'Enregistrement auto')}>
       <span className="rec-dot" />
       <span>{text}</span>
     </button>
@@ -54,7 +55,9 @@ function RecPill(): JSX.Element | null {
 }
 
 export default function TitleBar(): JSX.Element {
-  const { view, videoPath, closeVideo, setView, jobs, setExportsOpen, setSettingsOpen, setShortcutsOpen } = useApp()
+  const { view, videoPath, closeVideo, setView, jobs, setExportsOpen, setSettingsOpen, setShortcutsOpen, setWhatsNewOpen, settings } =
+    useApp()
+  const unseen = !!settings && settings.lastSeenVersion !== window.frag.version
   const active = jobs.filter((j) => j.status === 'running' || j.status === 'queued')
   const running = jobs.find((j) => j.status === 'running')
   const finished = jobs.filter((j) => j.status === 'done').length
@@ -79,9 +82,9 @@ export default function TitleBar(): JSX.Element {
         {view === 'editor' && videoPath && (
           <>
             <span className="crumb-sep" />
-            <button className="crumb-back" onClick={closeVideo} title="Retour à la bibliothèque (Échap)">
+            <button className="crumb-back" onClick={closeVideo} title={tr('Back to library (Esc)', 'Retour à la bibliothèque (Échap)')}>
               <ChevronLeft size={16} />
-              Bibliothèque
+              {tr('Library', 'Bibliothèque')}
             </button>
             <span className="crumb-current" title={videoPath}>
               {stripExt(baseName(videoPath))}
@@ -91,7 +94,14 @@ export default function TitleBar(): JSX.Element {
       </div>
       <div className="titlebar-right">
         <RecPill />
-        <button className="tb-btn" onClick={() => setShortcutsOpen(true)} title="Raccourcis clavier (?)">
+        <button
+          className={`tb-btn tb-news ${unseen ? 'is-new' : ''}`}
+          onClick={() => setWhatsNewOpen(true)}
+          title={tr('What’s new', 'Nouveautés')}
+        >
+          <Sparkles size={16} />
+        </button>
+        <button className="tb-btn" onClick={() => setShortcutsOpen(true)} title={tr('Keyboard shortcuts (?)', 'Raccourcis clavier (?)')}>
           <Keyboard size={16} />
         </button>
         <button className={`tb-btn tb-exports ${active.length ? 'is-active' : ''}`} onClick={() => setExportsOpen(true)}>
@@ -104,7 +114,7 @@ export default function TitleBar(): JSX.Element {
           ) : null}
           {running && <span className="tb-progress" style={{ width: `${Math.round(running.progress * 100)}%` }} />}
         </button>
-        <button className="tb-btn" onClick={() => setSettingsOpen(true)} title="Réglages">
+        <button className="tb-btn" onClick={() => setSettingsOpen(true)} title={tr('Settings', 'Réglages')}>
           <Settings size={16} />
         </button>
       </div>

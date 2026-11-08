@@ -1,12 +1,13 @@
 import { createHash, randomUUID } from 'crypto'
 import { EventEmitter } from 'events'
+import { tr } from '@shared/i18n'
 
 /**
- * Client minimal pour OBS WebSocket 5 (intégré à OBS depuis la version 28).
- * Dans OBS : Outils → Paramètres du serveur WebSocket → Activer.
+ * Minimal OBS WebSocket 5 client (built into OBS since version 28).
+ * In OBS: Tools → WebSocket Server Settings → Enable.
  */
 
-const OUTPUTS = 1 << 6 // abonnement aux événements de sortie (enregistrement)
+const OUTPUTS = 1 << 6 // subscribe to output events (recording)
 
 const sha = (s: string): string => createHash('sha256').update(s).digest('base64')
 
@@ -26,12 +27,12 @@ export class ObsError extends Error {
 }
 
 function closeReason(code: number): ObsError {
-  if (code === 4009) return new ObsError('Mot de passe OBS refusé', 'auth')
-  if (code === 4010) return new ObsError('Version d’OBS WebSocket trop ancienne (il faut OBS 28 ou plus)')
+  if (code === 4009) return new ObsError(tr('OBS password rejected', 'Mot de passe OBS refusé'), 'auth')
+  if (code === 4010) return new ObsError(tr('OBS WebSocket version too old (OBS 28 or later needed)', 'Version d’OBS WebSocket trop ancienne (il faut OBS 28 ou plus)'))
   if (code === 1006 || code === 1005) {
-    return new ObsError('OBS est fermé ou son serveur WebSocket est désactivé', 'unreachable')
+    return new ObsError(tr('OBS is closed or its WebSocket server is turned off', 'OBS est fermé ou son serveur WebSocket est désactivé'), 'unreachable')
   }
-  return new ObsError(`Connexion à OBS perdue (code ${code})`, 'unreachable')
+  return new ObsError(tr(`Lost connection to OBS (code ${code})`, `Connexion à OBS perdue (code ${code})`), 'unreachable')
 }
 
 export class ObsClient extends EventEmitter {
@@ -62,10 +63,10 @@ export class ObsClient extends EventEmitter {
         try {
           ws.close()
         } catch {
-          /* déjà fermé */
+          /* already closed */
         }
       }
-      const timeout = setTimeout(() => fail(new ObsError('OBS ne répond pas', 'unreachable')), 5000)
+      const timeout = setTimeout(() => fail(new ObsError(tr('OBS isn’t responding', 'OBS ne répond pas'), 'unreachable')), 5000)
 
       ws.onmessage = (ev): void => {
         let msg: { op: number; d: Record<string, unknown> }
@@ -76,7 +77,7 @@ export class ObsClient extends EventEmitter {
         }
         const d = msg.d
         if (msg.op === 0) {
-          // Hello : OBS dit s'il faut un mot de passe
+          // Hello: OBS says whether a password is needed
           const auth = d.authentication as { challenge: string; salt: string } | undefined
           const identify: Record<string, unknown> = { rpcVersion: 1, eventSubscriptions: OUTPUTS }
           if (auth) {
@@ -101,7 +102,7 @@ export class ObsClient extends EventEmitter {
           clearTimeout(p.timer)
           const status = d.requestStatus as { result: boolean; code: number; comment?: string }
           if (status?.result) p.resolve(d.responseData ?? {})
-          else p.reject(new ObsError(status?.comment || `OBS a refusé la demande (code ${status?.code})`))
+          else p.reject(new ObsError(status?.comment || tr(`OBS rejected the request (code ${status?.code})`, `OBS a refusé la demande (code ${status?.code})`)))
         }
       }
       ws.onclose = (ev): void => {
@@ -118,19 +119,19 @@ export class ObsClient extends EventEmitter {
         }
       }
       ws.onerror = (): void => {
-        /* onclose suit toujours, avec le code utile */
+        /* onclose always follows, with the useful code */
       }
     })
   }
 
   request<T = Record<string, unknown>>(requestType: string, requestData?: Record<string, unknown>): Promise<T> {
     const ws = this.ws
-    if (!ws || ws.readyState !== WebSocket.OPEN) return Promise.reject(new ObsError('OBS n’est pas connecté', 'unreachable'))
+    if (!ws || ws.readyState !== WebSocket.OPEN) return Promise.reject(new ObsError(tr('OBS isn’t connected', 'OBS n’est pas connecté'), 'unreachable'))
     const requestId = randomUUID()
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(requestId)
-        reject(new ObsError(`OBS ne répond pas à ${requestType}`))
+        reject(new ObsError(tr(`OBS didn’t answer ${requestType}`, `OBS ne répond pas à ${requestType}`)))
       }, 8000)
       this.pending.set(requestId, { resolve: resolve as (v: unknown) => void, reject, timer })
       ws.send(JSON.stringify({ op: 6, d: { requestType, requestId, requestData } }))
@@ -144,7 +145,7 @@ export class ObsClient extends EventEmitter {
       try {
         ws.close()
       } catch {
-        /* rien */
+        /* nothing */
       }
     }
   }

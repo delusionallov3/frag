@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { assetUrl } from '../lib/assets'
 
-/** Image Valorant (agent, map, arme, rang) ; disparaît proprement si elle n'est pas dispo */
+/** Valorant image (agent, map, weapon, rank); renders the fallback if it can't load */
 export default function VImg({
   src,
   className,

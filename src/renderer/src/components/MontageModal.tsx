@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowUp, ArrowDown, X, Plus, Clapperboard } from 'lucide-react'
 import type { CardStyle, Clip, MontageItem, Project } from '@shared/types'
+import { locale, tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { baseName, fmtClipLen, stripExt } from '../lib/format'
 import { CARD_ACCENTS, CARD_STYLES, renderCard } from '../lib/cards'
@@ -12,17 +13,17 @@ interface Pick {
   videoPath: string
   clip: Clip
   title: string
-  /** ligne d'infos sous le titre (map · agent…) */
+  /** info line under the title (map · agent…) */
   sub: string
 }
 
-const TRANSITIONS: { value: number; label: string }[] = [
-  { value: 0, label: 'Coupe sèche' },
-  { value: 0.3, label: 'Fondu court' },
-  { value: 0.8, label: 'Fondu long' }
+const transitions = (): { value: number; label: string }[] => [
+  { value: 0, label: tr('Hard cut', 'Coupe sèche') },
+  { value: 0.3, label: tr('Short fade', 'Fondu court') },
+  { value: 0.8, label: tr('Long fade', 'Fondu long') }
 ]
 
-/** Préférences de carton gardées d'une fois sur l'autre (simple confort) */
+/** Title card preferences remembered between sessions (just a convenience) */
 const readPref = (k: string, d: string): string => {
   try {
     return localStorage.getItem(k) ?? d
@@ -34,7 +35,7 @@ const writePref = (k: string, v: string): void => {
   try {
     localStorage.setItem(k, v)
   } catch {
-    /* stockage indispo : tant pis */
+    /* storage unavailable: no big deal */
   }
 }
 
@@ -45,10 +46,10 @@ function recLabel(p: Project): { name: string; sub: string } {
     const team = m.teams.find((t) => t.id === me?.team)
     return {
       name: m.map,
-      sub: `${me?.agent ?? ''}${team ? ` · ${team.roundsWon}–${team.roundsLost}` : ''} · ${new Date(m.startedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+      sub: `${me?.agent ?? ''}${team ? ` · ${team.roundsWon}–${team.roundsLost}` : ''} · ${new Date(m.startedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}`
     }
   }
-  return { name: stripExt(baseName(p.videoPath)), sub: 'Rec non liée' }
+  return { name: stripExt(baseName(p.videoPath)), sub: tr('Unlinked recording', 'Rec non liée') }
 }
 
 export default function MontageModal(): JSX.Element | null {
@@ -59,7 +60,7 @@ export default function MontageModal(): JSX.Element | null {
   const [transition, setTransition] = useState(0.3)
   const [style, setStyleState] = useState<CardStyle>(() => {
     const v = readPref('frag.cardStyle', 'slab')
-    return CARD_STYLES.some((c) => c.value === v) ? (v as CardStyle) : 'slab'
+    return CARD_STYLES().some((c) => c.value === v) ? (v as CardStyle) : 'slab'
   })
   const [accent, setAccentState] = useState(() => readPref('frag.cardAccent', CARD_ACCENTS[0]))
   const [name, setName] = useState('')
@@ -132,7 +133,8 @@ export default function MontageModal(): JSX.Element | null {
       )
     } catch (e) {
       setBusy(false)
-      setError(`Les cartons n’ont pas pu être dessinés (${e instanceof Error ? e.message : String(e)}).`)
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(tr(`Couldn’t draw the title cards (${msg}).`, `Les cartons n’ont pas pu être dessinés (${msg}).`))
       return
     }
     const res = await window.frag.exportMontage(items, { transition, name: name.trim() })
@@ -143,17 +145,19 @@ export default function MontageModal(): JSX.Element | null {
     }
     setMontageOpen(false)
     setPicks([])
-    showToast('Montage ajouté à l’export', { label: 'Voir', run: () => setExportsOpen(true) })
+    showToast(tr('Montage added to exports', 'Montage ajouté à l’export'), { label: tr('View', 'Voir'), run: () => setExportsOpen(true) })
   }
 
   return (
     <Modal open title="Montage" onClose={() => setMontageOpen(false)} width={1180}>
       <div className="mt">
         <div className="mt-col">
-          <div className="mt-head">Tes clips</div>
+          <div className="mt-head">{tr('Your clips', 'Tes clips')}</div>
           <div className="mt-scroll">
             {projects === null ? null : projects.length === 0 ? (
-              <p className="mt-empty">Aucun clip pour l’instant. Crée des clips dans tes recs, ils apparaîtront ici.</p>
+              <p className="mt-empty">
+                {tr('No clips yet. Make clips in your recordings and they’ll show up here.', 'Aucun clip pour l’instant. Crée des clips dans tes recs, ils apparaîtront ici.')}
+              </p>
             ) : (
               projects.map((p) => {
                 const l = recLabel(p)
@@ -185,16 +189,16 @@ export default function MontageModal(): JSX.Element | null {
 
         <div className="mt-col">
           <div className="mt-head">
-            Ordre du montage
+            {tr('Montage order', 'Ordre du montage')}
             <span className="mt-total">
-              {picks.length} {picks.length > 1 ? 'clips' : 'clip'} · {fmtClipLen(total)}
+              {picks.length} {picks.length === 1 ? 'clip' : 'clips'} · {fmtClipLen(total)}
             </span>
           </div>
           <div className="mt-scroll">
             {picks.length === 0 ? (
               <div className="mt-empty is-center">
                 <Clapperboard />
-                <p>Clique sur des clips à gauche pour les ajouter, dans l’ordre que tu veux.</p>
+                <p>{tr('Click clips on the left to add them, in any order you like.', 'Clique sur des clips à gauche pour les ajouter, dans l’ordre que tu veux.')}</p>
               </div>
             ) : (
               picks.map((p, i) => (
@@ -211,8 +215,8 @@ export default function MontageModal(): JSX.Element | null {
                       value={p.title}
                       onChange={(e) => edit(p.key, { title: e.target.value })}
                       onKeyDown={(e) => e.stopPropagation()}
-                      placeholder="Titre"
-                      title="Titre du carton"
+                      placeholder={tr('Title', 'Titre')}
+                      title={tr('Title card text', 'Titre du carton')}
                       disabled={style === 'none'}
                     />
                     <input
@@ -221,18 +225,18 @@ export default function MontageModal(): JSX.Element | null {
                       onChange={(e) => edit(p.key, { sub: e.target.value })}
                       onKeyDown={(e) => e.stopPropagation()}
                       placeholder="Ascent · Jett · R7"
-                      title="Ligne d’infos (sépare avec ·)"
+                      title={tr('Info line (separate with ·)', 'Ligne d’infos (sépare avec ·)')}
                       disabled={style === 'none'}
                     />
                   </div>
                   <span className="mt-len">{fmtClipLen(p.clip.end - p.clip.start)}</span>
-                  <button className="icon-btn" onClick={() => move(i, -1)} disabled={i === 0} title="Monter">
+                  <button className="icon-btn" onClick={() => move(i, -1)} disabled={i === 0} title={tr('Move up', 'Monter')}>
                     <ArrowUp />
                   </button>
-                  <button className="icon-btn" onClick={() => move(i, 1)} disabled={i === picks.length - 1} title="Descendre">
+                  <button className="icon-btn" onClick={() => move(i, 1)} disabled={i === picks.length - 1} title={tr('Move down', 'Descendre')}>
                     <ArrowDown />
                   </button>
-                  <button className="icon-btn is-danger" onClick={() => setPicks((ps) => ps.filter((x) => x.key !== p.key))} title="Retirer">
+                  <button className="icon-btn is-danger" onClick={() => setPicks((ps) => ps.filter((x) => x.key !== p.key))} title={tr('Remove', 'Retirer')}>
                     <X />
                   </button>
                 </div>
@@ -243,8 +247,8 @@ export default function MontageModal(): JSX.Element | null {
 
         <div className="mt-col">
           <div className="mt-head">
-            Carton titre
-            <span className="mt-total">{shown ? `clip ${picks.indexOf(shown) + 1}` : 'exemple'}</span>
+            {tr('Title card', 'Carton titre')}
+            <span className="mt-total">{shown ? `clip ${picks.indexOf(shown) + 1}` : tr('example', 'exemple')}</span>
           </div>
           <div className="mt-style-body">
             <CardPreview
@@ -260,14 +264,14 @@ export default function MontageModal(): JSX.Element | null {
               }}
             />
             <div className="mt-styles">
-              {CARD_STYLES.map((c) => (
+              {CARD_STYLES().map((c) => (
                 <button key={c.value} className={style === c.value ? 'is-on' : ''} onClick={() => setStyle(c.value)} title={c.hint}>
                   {c.label}
                 </button>
               ))}
             </div>
             <div className={`mt-accents ${noAccent ? 'is-off' : ''}`}>
-              <span>Couleur</span>
+              <span>{tr('Color', 'Couleur')}</span>
               {CARD_ACCENTS.map((c) => (
                 <button
                   key={c}
@@ -275,7 +279,7 @@ export default function MontageModal(): JSX.Element | null {
                   style={{ background: c }}
                   onClick={() => setAccent(c)}
                   disabled={noAccent}
-                  aria-label={`Couleur ${c}`}
+                  aria-label={`${tr('Color', 'Couleur')} ${c}`}
                 />
               ))}
             </div>
@@ -285,7 +289,7 @@ export default function MontageModal(): JSX.Element | null {
             <div className="field">
               <label>Transition</label>
               <div className="segmented">
-                {TRANSITIONS.map((t) => (
+                {transitions().map((t) => (
                   <button key={t.value} className={transition === t.value ? 'is-on' : ''} onClick={() => setTransition(t.value)}>
                     {t.label}
                   </button>
@@ -297,11 +301,11 @@ export default function MontageModal(): JSX.Element | null {
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
-              placeholder="Nom du fichier (optionnel)"
+              placeholder={tr('File name (optional)', 'Nom du fichier (optionnel)')}
             />
             {error && <div className="mp-error">{error}</div>}
             <button className="btn btn-primary btn-block" disabled={!picks.length || busy} onClick={exportMontage}>
-              {busy ? 'Préparation…' : 'Exporter le montage'}
+              {busy ? tr('Preparing…', 'Préparation…') : tr('Export montage', 'Exporter le montage')}
             </button>
           </div>
         </div>

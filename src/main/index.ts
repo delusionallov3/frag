@@ -18,7 +18,8 @@ import {
   statsEntries
 } from './store'
 import { autoRecStatus, resetObs, startAutoRec, testObs } from './autorec'
-import { createTray, destroyTray, setTrayUpdate, updateTrayStatus } from './tray'
+import { tr } from '@shared/i18n'
+import { createTray, destroyTray, refreshTray, setTrayUpdate, updateTrayStatus } from './tray'
 import { checkForUpdates, installUpdate, startUpdater, updateStatus } from './updater'
 import { notify, notifyLinked, setupNotifications, watchExports, watchObsMissing } from './notify'
 import { assetsError, cachedImage, getAssets } from './valapi'
@@ -49,15 +50,15 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 let win: BrowserWindow | null = null
-/** Vrai quand on quitte pour de bon (menu « Quitter », arrêt de Windows…) : la croix ne fait alors plus que cacher */
+/** True when quitting for real (tray "Quit", Windows shutdown…); otherwise the close button only hides */
 let isQuitting = false
-/** Copie synchrone du réglage, lue dans l'événement « close » (qui ne peut pas attendre) */
+/** Synchronous copy of the setting, read in the "close" event (which can't await) */
 let closeToTray = true
 let trayHintShown = false
-/** Lancé par Windows au démarrage de session : on reste caché dans la zone de notification */
+/** Started by Windows at sign-in: stay hidden in the system tray */
 const startHidden = process.argv.includes('--hidden')
 
-// Une seule instance : relancer Frag réaffiche la fenêtre existante
+// Single instance: launching Frag again shows the existing window
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) app.quit()
 
@@ -71,7 +72,7 @@ function showWindow(): void {
   win.focus()
 }
 
-/** Depuis une notification : affiche Frag et ouvre la rec dans l'éditeur */
+/** From a notification: show Frag and open the recording in the editor */
 function openRecInFrag(path: string): void {
   showWindow()
   send('ui:openVideo', path)
@@ -87,26 +88,28 @@ async function clipsFolder(): Promise<string | null> {
   return s.outputFolder || (s.recsFolder ? join(s.recsFolder, 'Clips') : null)
 }
 
-/** Dossier choisi dans les réglages, sinon on ouvre les réglages pour le choisir */
+/** Open the folder set in Settings, or open Settings to pick one */
 async function openFolderOrSettings(dir: string | null): Promise<void> {
   if (!dir) return openSettingsInFrag()
   await fs.mkdir(dir, { recursive: true }).catch(() => {})
   await shell.openPath(dir)
 }
 
-/** Une rec en cours ou des exports en attente seraient coupés : on demande avant de redémarrer */
+/** A running recording or pending exports would be cut off: ask before restarting */
 async function restartToUpdate(): Promise<void> {
   if (updateStatus().state !== 'ready') return
   const exporting = listJobs().some((j) => j.status === 'queued' || j.status === 'running')
   const recording = autoRecStatus().recording
   if (exporting || recording) {
-    const what = recording ? 'Une rec est en cours : Frag ne pourra pas la lier à son match.' : 'Des exports sont en cours et seront annulés.'
+    const what = recording
+      ? tr('A recording is in progress: Frag won’t be able to link it to its match.', 'Une rec est en cours : Frag ne pourra pas la lier à son match.')
+      : tr('Exports are running and will be canceled.', 'Des exports sont en cours et seront annulés.')
     const { response } = await dialog.showMessageBox({
       type: 'warning',
-      title: 'Mise à jour de Frag',
-      message: 'Redémarrer maintenant ?',
-      detail: `${what} Sinon, la mise à jour s’installera quand tu quitteras Frag.`,
-      buttons: ['Redémarrer', 'Plus tard'],
+      title: tr('Frag update', 'Mise à jour de Frag'),
+      message: tr('Restart now?', 'Redémarrer maintenant ?'),
+      detail: `${what} ${tr('Otherwise the update will install when you quit Frag.', 'Sinon, la mise à jour s’installera quand tu quitteras Frag.')}`,
+      buttons: [tr('Restart', 'Redémarrer'), tr('Later', 'Plus tard')],
       defaultId: 1,
       cancelId: 1
     })
@@ -121,7 +124,7 @@ function quitForReal(): void {
   app.quit()
 }
 
-/** Démarrage avec Windows (seulement pour l'app installée : en dev ça enregistrerait electron.exe) */
+/** Start with Windows (installed app only: in dev it would register electron.exe) */
 function applyLoginItem(enabled: boolean): void {
   if (!app.isPackaged || process.platform !== 'win32') return
   app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--hidden'] })
@@ -131,11 +134,11 @@ function send(channel: string, payload?: unknown): void {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
 }
 
-/** Sert les fichiers locaux (vidéos + vignettes) avec support des Range pour pouvoir naviguer dans la vidéo. */
+/** Serves local files (videos + thumbnails) with Range support so the video can be scrubbed. */
 function registerMediaProtocol(): void {
   protocol.handle(SCHEME, async (req) => {
     const url = new URL(req.url)
-    // Images Valorant : téléchargées une fois puis servies depuis le cache disque
+    // Valorant images: downloaded once, then served from the disk cache
     if (url.host === 'asset') {
       const img = await cachedImage(url.searchParams.get('u') ?? '')
       if (!img) return new Response('not found', { status: 404 })
@@ -201,7 +204,7 @@ async function rewatch(): Promise<void> {
 }
 
 function registerIpc(): void {
-  // HenrikDev : les erreurs remontent sous forme { error } pour garder un message lisible côté interface
+  // HenrikDev: errors come back as { error } so the UI can show a readable message
   const safe =
     <A extends unknown[], R>(fn: (...a: A) => Promise<R>) =>
     async (_e: unknown, ...a: A): Promise<{ ok: true; data: R } | { ok: false; error: string }> => {
@@ -218,10 +221,11 @@ function registerIpc(): void {
     if ('launchAtLogin' in patch) applyLoginItem(next.launchAtLogin)
     if ('recsFolder' in patch) await rewatch()
     if (patch.obs && ('host' in patch.obs || 'port' in patch.obs)) resetObs()
+    if ('language' in patch) refreshTray()
     return next
   })
 
-  // OBS : test de connexion (mot de passe tapé, ou celui enregistré), mot de passe chiffré, état en direct
+  // OBS: connection test (typed password, or the saved one), encrypted password, live state
   ipcMain.handle('obs:test', async (_e, host: string, port: number, password: string | null) =>
     testObs(host, port, password ?? (await getObsPassword()))
   )
@@ -241,9 +245,9 @@ function registerIpc(): void {
   })
   ipcMain.handle('dialog:video', async () => {
     const res = await dialog.showOpenDialog(win!, {
-      title: 'Ouvrir une vidéo',
+      title: tr('Open a video', 'Ouvrir une vidéo'),
       properties: ['openFile'],
-      filters: [{ name: 'Vidéos', extensions: ['mp4', 'mkv', 'mov', 'm4v', 'webm'] }]
+      filters: [{ name: tr('Videos', 'Vidéos'), extensions: ['mp4', 'mkv', 'mov', 'm4v', 'webm'] }]
     })
     return res.canceled ? null : res.filePaths[0]
   })
@@ -253,15 +257,15 @@ function registerIpc(): void {
     return s.recsFolder ? listVideos(s.recsFolder) : []
   })
 
-  // Corbeille Windows (récupérable) + oubli des clips / du match de cette rec
+  // Windows Recycle Bin (recoverable) + forget this recording's clips / match
   ipcMain.handle(
     'library:trash',
     safe(async (path: string) => {
       const s = await getSettings()
       const VIDEO = /\.(mp4|mkv|mov|m4v|webm)$/i
-      if (!VIDEO.test(path)) throw new Error('Ce fichier n’est pas une vidéo')
+      if (!VIDEO.test(path)) throw new Error(tr('This file isn’t a video', 'Ce fichier n’est pas une vidéo'))
       if (s.recsFolder && !path.toLowerCase().startsWith(s.recsFolder.toLowerCase())) {
-        throw new Error('Seules les recs du dossier surveillé peuvent être supprimées ici')
+        throw new Error(tr('Only recordings from the watched folder can be deleted here', 'Seules les recs du dossier surveillé peuvent être supprimées ici'))
       }
       await shell.trashItem(path)
       await deleteProject(path)
@@ -276,7 +280,7 @@ function registerIpc(): void {
       try {
         posterPath = await poster(path, meta.duration)
       } catch {
-        /* pas grave */
+        /* not a big deal */
       }
       return { meta, poster: posterPath }
     } catch (e) {
@@ -301,7 +305,7 @@ function registerIpc(): void {
   ipcMain.handle('export:encoders', () => detectEncoders())
   ipcMain.handle('export:outputFolder', () => clipsFolder())
 
-  // La clé n'est enregistrée que si HenrikDev l'accepte ; le quota détecté est appliqué au limiteur
+  // The key is only saved if HenrikDev accepts it; the detected quota is applied to the rate limiter
   ipcMain.handle('henrik:setKey', async (_e, key: string | null) => {
     if (!key?.trim()) {
       await setHenrikKey(null)
@@ -315,7 +319,7 @@ function registerIpc(): void {
   })
   ipcMain.handle('henrik:testStoredKey', async () => {
     const key = await getHenrikKey()
-    if (!key) return { ok: false, error: 'Aucune clé enregistrée.', limit: null, remaining: null, resetIn: null }
+    if (!key) return { ok: false, error: tr('No key saved.', 'Aucune clé enregistrée.'), limit: null, remaining: null, resetIn: null }
     return testKey(key)
   })
   ipcMain.handle('henrik:rate', async () => rateInfo((await getSettings()).rateLimit))
@@ -369,12 +373,13 @@ function createWindow(show = true): void {
     show: false,
     backgroundColor: '#0b0b0d',
     title: 'Frag',
-    // En dev, l'icône de la barre des tâches ; une fois installée, Windows prend celle du .exe
+    // Taskbar icon in dev; once installed, Windows uses the .exe's icon
     ...(app.isPackaged ? {} : { icon: join(__dirname, '../../build/icon.png') }),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#0b0b0d', symbolColor: '#a1a1aa', height: 44 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
+      additionalArguments: [`--frag-version=${app.getVersion()}`],
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
@@ -384,7 +389,7 @@ function createWindow(show = true): void {
   win.once('ready-to-show', () => {
     if (show) win?.show()
   })
-  // La croix cache Frag dans la zone de notification (l'enregistrement auto continue)
+  // The close button hides Frag in the system tray (auto-record keeps running)
   win.on('close', (e) => {
     if (isQuitting || !closeToTray) return
     e.preventDefault()
@@ -392,8 +397,11 @@ function createWindow(show = true): void {
     if (!trayHintShown) {
       trayHintShown = true
       void notify(
-        'Frag tourne toujours',
-        'L’enregistrement auto continue en arrière-plan. Clic droit sur l’icône près de l’horloge pour quitter.',
+        tr('Frag is still running', 'Frag tourne toujours'),
+        tr(
+          'Auto-record keeps going in the background. Right-click the icon next to the clock to quit.',
+          'L’enregistrement auto continue en arrière-plan. Clic droit sur l’icône près de l’horloge pour quitter.'
+        ),
         showWindow,
         true
       )
@@ -461,8 +469,11 @@ app.whenReady().then(async () => {
     (version) => {
       setTrayUpdate(version)
       void notify(
-        `Frag ${version} est prêt`,
-        'La mise à jour s’installera quand tu quitteras Frag. Clique pour redémarrer maintenant.',
+        tr(`Frag ${version} is ready`, `Frag ${version} est prêt`),
+        tr(
+          'The update will install when you quit Frag. Click to restart now.',
+          'La mise à jour s’installera quand tu quitteras Frag. Clique pour redémarrer maintenant.'
+        ),
         () => void restartToUpdate()
       )
     }
@@ -471,7 +482,7 @@ app.whenReady().then(async () => {
   void getAssets()
 })
 
-// Avec la zone de notification la fenêtre est cachée, pas fermée : on n'arrive ici que si le réglage est coupé
+// With the tray the window is hidden, not closed: we only get here when that setting is off
 app.on('window-all-closed', () => {
   if (isQuitting || !closeToTray) app.quit()
 })

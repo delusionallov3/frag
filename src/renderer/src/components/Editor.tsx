@@ -17,7 +17,9 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import type { AutoSyncResult, Clip, MatchData, MatchLink, Marker, ReviewNote, RiotAccount, ThumbStrip, VideoMeta, Waveform } from '@shared/types'
+import { num, tr } from '@shared/i18n'
 import { useApp } from '../store'
+import { shortcutKey } from '../lib/keys'
 import { autoLinkVerdict } from '@shared/link'
 import { scoreSync } from '@shared/scoreSync'
 import { fmtTime, mediaUrl, uid } from '../lib/format'
@@ -61,7 +63,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
   const [projectLoaded, setProjectLoaded] = useState(false)
   const [selectedId, setSelectedIdRaw] = useState<string | null>(null)
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
-  // Sélectionner un clip désélectionne le marqueur (et inversement)
+  // Selecting a clip deselects the marker (and vice versa)
   const setSelectedId = useCallback((v: string | null | ((s: string | null) => string | null)) => {
     setSelectedIdRaw((prev) => {
       const next = typeof v === 'function' ? v(prev) : v
@@ -101,8 +103,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
   const sortedClips = useMemo(() => [...clips].sort((a, b) => a.start - b.start), [clips])
   const selected = clips.find((c) => c.id === selectedId) ?? null
 
-  // Toujours la dernière version de l'état pour les raccourcis et la boucle rAF
-  // Analyse du match (rounds, kills, morts) recalculée quand la liaison ou la synchro change
+  // Match analysis (rounds, kills, deaths), recomputed when the link or the sync changes
   const analysis = useMemo(() => (link ? analyse(link) : null), [link])
   const events = analysis?.events ?? []
   const myKillEvents = useMemo(() => events.filter((e) => e.kind === 'kill'), [events])
@@ -116,7 +117,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
   const st = useRef({ clips, markers, selectedId, selectedMarkerId, time, duration, fps, loop, selected, sortedClips, excluded, link, myKillEvents, reviewNotes, reviewList, reviewIndex, reviewAuto, tab })
   st.current = { clips, markers, selectedId, selectedMarkerId, time, duration, fps, loop, selected, sortedClips, excluded, link, myKillEvents, reviewNotes, reviewList, reviewIndex, reviewAuto, tab }
 
-  /* ------------------------------ Chargement ------------------------------ */
+  /* ------------------------------ Loading ------------------------------ */
 
   useEffect(() => {
     let alive = true
@@ -138,7 +139,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     }
   }, [path])
 
-  /* ------------------------------ Sauvegarde auto ------------------------------ */
+  /* ------------------------------ Autosave ------------------------------ */
 
   const saveFailed = useRef(false)
   const dirty = useRef(false)
@@ -159,7 +160,8 @@ export default function Editor({ path }: { path: string }): JSX.Element {
       dirty.current = true
       if (!saveFailed.current) {
         saveFailed.current = true
-        showToast(`Sauvegarde impossible : ${e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': /, '') : e}`)
+        const msg = e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': /, '') : String(e)
+        showToast(tr(`Couldn’t save: ${msg}`, `Sauvegarde impossible : ${msg}`))
       }
     }
   }, [path, projectLoaded, showToast])
@@ -173,7 +175,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     return () => clearTimeout(t)
   }, [clips, markers, link, reviewNotes, projectLoaded, saveNow])
 
-  // Retour à la bibliothèque ou fermeture de l'app : on écrit ce qui n'a pas encore été sauvegardé
+  // Back to the library or app closing: write whatever hasn't been saved yet
   useEffect(() => {
     const flush = (): void => {
       if (dirty.current) void saveNowRef.current()
@@ -186,7 +188,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
   }, [])
   saveNowRef.current = saveNow
 
-  /* ------------------------------ Lecture ------------------------------ */
+  /* ------------------------------ Playback ------------------------------ */
 
   useEffect(() => {
     let id = 0
@@ -266,7 +268,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
 
   const nudge = useCallback((sec: number) => seek((videoRef.current?.currentTime ?? 0) + sec), [seek])
 
-  /* ------------------------------ Historique ------------------------------ */
+  /* ------------------------------ History ------------------------------ */
 
   const pushHistory = useCallback(() => {
     past.current.push({ clips: st.current.clips, markers: st.current.markers })
@@ -291,7 +293,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     setMarkers(next.markers)
   }, [])
 
-  /* ------------------------------ Édition des clips ------------------------------ */
+  /* ------------------------------ Clip editing ------------------------------ */
 
   const addClip = useCallback(
     (start: number, end: number) => {
@@ -308,7 +310,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     setClips((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)))
   }, [])
 
-  /** C : nouveau clip des 10 dernières secondes, terminé à la tête de lecture */
+  /** C: new clip of the last 10 seconds, ending at the playhead */
   const clipHere = useCallback(() => {
     const { time: t, duration: d } = st.current
     if (!d) return
@@ -373,7 +375,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     [pushHistory]
   )
 
-  /** Maj+M : supprime le marqueur le plus proche de la tête de lecture (à 1 s près) */
+  /** Shift+M: delete the marker closest to the playhead (within 1 s) */
   const removeMarkerNearPlayhead = useCallback(() => {
     const { time: t, markers: ms } = st.current
     let best: Marker | null = null
@@ -403,8 +405,12 @@ export default function Editor({ path }: { path: string }): JSX.Element {
         quality: settings.quality,
         audio: settings.audio
       })
-      showToast(sorted.length === 1 ? `« ${sorted[0].name} » ajouté à l’export` : `${sorted.length} clips ajoutés à l’export`, {
-        label: 'Voir',
+      const what =
+        sorted.length === 1
+          ? tr(`“${sorted[0].name}” added to exports`, `« ${sorted[0].name} » ajouté à l’export`)
+          : tr(`${sorted.length} clips added to exports`, `${sorted.length} clips ajoutés à l’export`)
+      showToast(what, {
+        label: tr('View', 'Voir'),
         run: () => setExportsOpen(true)
       })
     },
@@ -421,24 +427,31 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     async (match: MatchData, account: RiotAccount, silent = false) => {
       const me = findMe(match, account)
       const times = await window.frag.recTimes(path)
-      // Heure de début de la rec vs heure de début du match → première estimation de la synchro
+      // Recording start time vs match start time → first sync estimate
       const autoOffset = times.ok ? (times.data.start - match.startedAt) / 1000 : null
-      // Rec faite avec l'enregistrement auto : les fins de round notées pendant la game calent tout de suite
+      // Recorded with auto-record: the round ends noted during the game sync it right away
       const sync = times.ok && me ? scoreSync(match, me.puuid, times.data.rounds) : null
-      const anchors = sync ? [{ id: uid(), matchTime: sync.matchTime, videoTime: sync.videoTime, label: 'score des rounds' }] : []
+      const anchors = sync ? [{ id: uid(), matchTime: sync.matchTime, videoTime: sync.videoTime, label: tr('round score', 'score des rounds') }] : []
       setLink({ match, puuid: me?.puuid ?? '', autoOffset, anchors })
       setTab('match')
-      if (!silent) showToast(`Match lié : ${match.map}${sync ? ', calé sur le score des rounds' : ''}`)
+      if (!silent) {
+        showToast(
+          tr(
+            `Match linked: ${match.map}${sync ? ', synced on the round score' : ''}`,
+            `Match lié : ${match.map}${sync ? ', calé sur le score des rounds' : ''}`
+          )
+        )
+      }
     },
     [path, showToast]
   )
 
-  // À l'ouverture d'une rec pas encore liée : on cherche le match correspondant tout seul
+  // When opening an unlinked recording: look for its match automatically
   const autoStarted = useRef(false)
   const [autoNote, setAutoNote] = useState<string | null>(null)
   const mounted = useRef(true)
   useEffect(() => {
-    // En dev, React monte / démonte / remonte : on remet le drapeau à vrai à chaque montage
+    // In dev, React mounts / unmounts / remounts: reset the flag on every mount
     mounted.current = true
     return () => {
       mounted.current = false
@@ -451,7 +464,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     setAutoTried('loading')
     const account = settings.accounts[0]
     window.frag.matchCandidates(path, account.region, account.riotId).then(async (res) => {
-      // Quoi qu'il arrive, on sort de l'état « recherche » (sinon le panneau tourne dans le vide)
+      // Whatever happens, leave the "searching" state (otherwise the panel spins forever)
       setAutoTried('done')
       if (!mounted.current) return
       const best = res.ok ? res.data[0] : undefined
@@ -462,15 +475,18 @@ export default function Editor({ path }: { path: string }): JSX.Element {
         const me = findMe(best.match, account)
         const team = best.match.teams.find((t) => t.id === me?.team)
         showToast(
-          `Match trouvé : ${best.match.map}${team ? ` · ${team.won ? 'victoire' : 'défaite'} ${team.roundsWon}–${team.roundsLost}` : ''}. Cale un round pour être précis.`,
-          { label: 'Caler', run: () => setTab('match') }
+          tr(
+            `Match found: ${best.match.map}${team ? ` · ${team.won ? 'win' : 'loss'} ${team.roundsWon}–${team.roundsLost}` : ''}. Sync a round to be precise.`,
+            `Match trouvé : ${best.match.map}${team ? ` · ${team.won ? 'victoire' : 'défaite'} ${team.roundsWon}–${team.roundsLost}` : ''}. Cale un round pour être précis.`
+          ),
+          { label: tr('Sync', 'Caler'), run: () => setTab('match') }
         )
       }
       setAutoTried('done')
     })
   }, [projectLoaded, link, settings, path, linkMatch, showToast])
 
-  // Rec liée en arrière-plan après la game (enregistrement auto) pendant qu'elle est ouverte
+  // Recording linked in the background after the game (auto-record) while it's open
   useEffect(
     () =>
       window.frag.onProjectLinked((p) => {
@@ -478,7 +494,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
         window.frag.getProject(path).then((proj) => {
           if (proj.match && !st.current.link) {
             setLink(proj.match)
-            showToast(`Match lié : ${proj.match.match.map}`)
+            showToast(tr(`Match linked: ${proj.match.match.map}`, `Match lié : ${proj.match.match.map}`))
           }
         })
       }),
@@ -487,7 +503,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
 
   const anchorAt = useCallback((matchTime: number, label: string) => {
     const v = videoRef.current?.currentTime ?? st.current.time
-    // Un calage recale tout le match : il remplace le précédent
+    // A sync point re-syncs the whole match: it replaces the previous one
     setLink((l) => (l ? { ...l, anchors: [{ id: uid(), matchTime, videoTime: v, label }] } : l))
   }, [])
 
@@ -497,13 +513,13 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     (r: AutoSyncResult) => {
       const l = st.current.link
       if (!l) return
-      // une ancre au milieu des kills du match, avec le décalage trouvé
+      // an anchor in the middle of the match's kills, with the offset found
       const ks = l.match.kills.map((k) => k.tMatch).sort((a, b) => a - b)
       const m = ks[Math.floor(ks.length / 2)] ?? 0
       setLink((x) =>
         x ? { ...x, anchors: [{ id: uid(), matchTime: m, videoTime: m - r.offset, label: `auto ${Math.round(r.confidence * 100)} %` }] } : x
       )
-      showToast('Match calé automatiquement sur le killfeed')
+      showToast(tr('Match synced automatically from the killfeed', 'Match calé automatiquement sur le killfeed'))
     },
     [showToast]
   )
@@ -531,7 +547,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
       const r = st.current.link?.match.rounds[roundIndex]
       if (!r || r.start === null) return
       anchorAt(r.start, `R${roundIndex + 1}`)
-      showToast(`Synchro calée sur le round ${roundIndex + 1}`)
+      showToast(tr(`Synced on round ${roundIndex + 1}`, `Synchro calée sur le round ${roundIndex + 1}`))
     },
     [anchorAt, showToast]
   )
@@ -541,12 +557,12 @@ export default function Editor({ path }: { path: string }): JSX.Element {
       const k = st.current.link?.match.kills[killIndex]
       if (!k) return
       anchorAt(k.tMatch, `kill R${k.round + 1}`)
-      showToast(`Tout le match est calé sur ce kill du round ${k.round + 1}`)
+      showToast(tr(`The whole match is synced on this round ${k.round + 1} kill`, `Tout le match est calé sur ce kill du round ${k.round + 1}`))
     },
     [anchorAt, showToast]
   )
 
-  /** Décale la synchro active (celle sous la tête de lecture) de `delta` secondes */
+  /** Shift the active sync point (the one under the playhead) by `delta` seconds */
   const nudgeSync = useCallback((delta: number) => {
     setLink((l) => {
       if (!l) return l
@@ -571,7 +587,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     (dir: 1 | -1) => {
       const { time: t, myKillEvents: ks } = st.current
       const inRange = ks.filter((k) => k.t >= 0 && k.t <= st.current.duration)
-      // On se place 2 s avant le kill : on compare donc avec t + 2
+      // We land 2 s before the kill, so compare with t + 2
       const ref = t + 2
       const target = dir > 0 ? inRange.find((k) => k.t > ref + 0.3) : [...inRange].reverse().find((k) => k.t < ref - 0.3)
       if (target) {
@@ -591,7 +607,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
       pushHistory()
       setClips((cs) => [...cs, ...list.map((c) => ({ ...c, id: uid() }))])
       setTab('clips')
-      showToast(list.length === 1 ? '1 clip créé' : `${list.length} clips créés`)
+      showToast(list.length === 1 ? tr('1 clip created', '1 clip créé') : tr(`${list.length} clips created`, `${list.length} clips créés`))
       return list.length
     },
     [analysis, pushHistory, showToast]
@@ -603,7 +619,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     [link, analysis, duration, clips]
   )
 
-  /* ------------------------------ Revoir ------------------------------ */
+  /* ------------------------------ Review ------------------------------ */
 
   const playReview = useCallback(
     (i: number) => {
@@ -614,7 +630,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
       setReviewIndex(i)
       v.currentTime = item.start
       playUntil.current = item.end
-      // À la fin du passage : on enchaîne sur le suivant si demandé
+      // At the end of the moment: move on to the next one if autoplay is on
       segmentEnd.current = () => {
         const s = st.current
         if (s.reviewAuto && s.tab === 'review' && i + 1 < s.reviewList.length) {
@@ -647,7 +663,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     })
   }, [])
 
-  /* ------------------------------ Raccourcis ------------------------------ */
+  /* ------------------------------ Shortcuts ------------------------------ */
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -655,7 +671,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable) return
       const ui = useApp.getState()
       if (ui.settingsOpen || ui.shortcutsOpen || ui.montageOpen) return
-      const k = e.key
+      const k = shortcutKey(e.key)
       const ctrl = e.ctrlKey || e.metaKey
       const s = st.current
 
@@ -835,7 +851,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     setSelectedId, jumpKill, playReview
   ])
 
-  /* ------------------------------ Rendu ------------------------------ */
+  /* ------------------------------ Render ------------------------------ */
 
   if (loadError) {
     return (
@@ -843,10 +859,10 @@ export default function Editor({ path }: { path: string }): JSX.Element {
         <div className="empty-icon is-error">
           <AlertTriangle size={26} />
         </div>
-        <h1>Impossible d’ouvrir cette vidéo</h1>
+        <h1>{tr('Can’t open this video', 'Impossible d’ouvrir cette vidéo')}</h1>
         <p className="mono-msg">{loadError}</p>
         <button className="btn btn-ghost btn-lg" onClick={closeVideo}>
-          Retour à la bibliothèque
+          {tr('Back to library', 'Retour à la bibliothèque')}
         </button>
       </div>
     )
@@ -870,7 +886,10 @@ export default function Editor({ path }: { path: string }): JSX.Element {
             onLoadedData={() => setReady(true)}
             onError={() =>
               setPlayError(
-                'Le lecteur n’arrive pas à lire ce fichier. Si c’est du HEVC/H.265, installe l’extension « HEVC Video Extensions » de Windows ou repasse OBS en H.264.'
+                tr(
+                  'The player can’t read this file. If it’s HEVC/H.265, install Windows’ “HEVC Video Extensions” or switch OBS back to H.264.',
+                  'Le lecteur n’arrive pas à lire ce fichier. Si c’est du HEVC/H.265, installe l’extension « HEVC Video Extensions » de Windows ou repasse OBS en H.264.'
+                )
               )
             }
           />
@@ -889,20 +908,20 @@ export default function Editor({ path }: { path: string }): JSX.Element {
             <div className="player-tag">
               <Scissors size={12} />
               {selected.name}
-              {loop && <span className="player-tag-loop">boucle</span>}
+              {loop && <span className="player-tag-loop">{tr('loop', 'boucle')}</span>}
             </div>
           )}
         </div>
 
         <div className="transport">
           <div className="transport-left">
-            <button className="icon-btn" onClick={() => stepFrame(-1)} title="Image précédente (←)">
+            <button className="icon-btn" onClick={() => stepFrame(-1)} title={`${tr('Previous frame', 'Image précédente')} (←)`}>
               <StepBack size={16} />
             </button>
-            <button className="play-btn" onClick={togglePlay} title="Lecture / pause (Espace)">
+            <button className="play-btn" onClick={togglePlay} title={tr('Play / pause (Space)', 'Lecture / pause (Espace)')}>
               {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
             </button>
-            <button className="icon-btn" onClick={() => stepFrame(1)} title="Image suivante (→)">
+            <button className="icon-btn" onClick={() => stepFrame(1)} title={`${tr('Next frame', 'Image suivante')} (→)`}>
               <StepForward size={16} />
             </button>
             <div className="timecode">
@@ -914,20 +933,20 @@ export default function Editor({ path }: { path: string }): JSX.Element {
             <button
               className={`chip-btn ${loop ? 'is-on' : ''}`}
               onClick={() => setLoop((v) => !v)}
-              title="Lire le clip sélectionné en boucle (R)"
+              title={tr('Loop the selected clip (R)', 'Lire le clip sélectionné en boucle (R)')}
             >
               <Repeat size={14} />
-              Boucle
+              {tr('Loop', 'Boucle')}
             </button>
             <div className="rate">
               {RATES.map((r) => (
                 <button key={r} className={r === rate ? 'is-on' : ''} onClick={() => setRate(r)}>
-                  {String(r).replace('.', ',')}×
+                  {num(r, r % 1 ? 2 : 0).replace(/([.,]\d)0$/, '$1')}×
                 </button>
               ))}
             </div>
             <div className="volume">
-              <button className="icon-btn" onClick={() => setMuted((m) => !m)} title="Couper le son">
+              <button className="icon-btn" onClick={() => setMuted((m) => !m)} title={tr('Mute', 'Couper le son')}>
                 {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
               <input
@@ -962,7 +981,7 @@ export default function Editor({ path }: { path: string }): JSX.Element {
             ) : null}
           </button>
           <button className={tab === 'review' ? 'is-on' : ''} onClick={() => setTab('review')}>
-            Revoir
+            {tr('Review', 'Revoir')}
             {review && review.deaths > 0 && <span className="count">{review.deaths}</span>}
           </button>
         </div>
@@ -1072,27 +1091,36 @@ export default function Editor({ path }: { path: string }): JSX.Element {
             onEventSelect={selectEvent}
             tools={
               <>
-                <button className="tool-btn" onClick={setIn} title="Début du clip à la tête de lecture">
+                <button className="tool-btn" onClick={setIn} title={tr('Clip start at the playhead', 'Début du clip à la tête de lecture')}>
                   <ArrowLeftToLine size={15} />
-                  Début <kbd>I</kbd>
+                  {tr('In', 'Début')} <kbd>I</kbd>
                 </button>
-                <button className="tool-btn" onClick={setOut} title="Fin du clip à la tête de lecture">
+                <button className="tool-btn" onClick={setOut} title={tr('Clip end at the playhead', 'Fin du clip à la tête de lecture')}>
                   <ArrowRightToLine size={15} />
-                  Fin <kbd>O</kbd>
+                  {tr('Out', 'Fin')} <kbd>O</kbd>
                 </button>
-                <button className="tool-btn is-accent" onClick={clipHere} title="Nouveau clip des 10 dernières secondes">
+                <button
+                  className="tool-btn is-accent"
+                  onClick={clipHere}
+                  title={tr('New clip of the last 10 seconds', 'Nouveau clip des 10 dernières secondes')}
+                >
                   <Scissors size={15} />
-                  Clip ici <kbd>C</kbd>
+                  {tr('Clip it', 'Clip ici')} <kbd>C</kbd>
                 </button>
-                <button className="tool-btn" onClick={addMarker} title="Poser un marqueur">
+                <button className="tool-btn" onClick={addMarker} title={tr('Drop a marker', 'Poser un marqueur')}>
                   <Flag size={15} />
-                  Marqueur <kbd>M</kbd>
+                  {tr('Marker', 'Marqueur')} <kbd>M</kbd>
                 </button>
                 <span className="tl-sep" />
-                <button className="icon-btn" onClick={undo} title="Annuler (Ctrl+Z)" disabled={!past.current.length}>
+                <button className="icon-btn" onClick={undo} title={tr('Undo (Ctrl+Z)', 'Annuler (Ctrl+Z)')} disabled={!past.current.length}>
                   <Undo2 size={15} />
                 </button>
-                <button className="icon-btn" onClick={redo} title="Rétablir (Ctrl+Maj+Z)" disabled={!future.current.length}>
+                <button
+                  className="icon-btn"
+                  onClick={redo}
+                  title={tr('Redo (Ctrl+Shift+Z)', 'Rétablir (Ctrl+Maj+Z)')}
+                  disabled={!future.current.length}
+                >
                   <Redo2 size={15} />
                 </button>
               </>

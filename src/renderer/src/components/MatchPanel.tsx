@@ -14,6 +14,7 @@ import {
   ScanSearch
 } from 'lucide-react'
 import type { AutoSyncResult, MatchCandidate, MatchData, MatchKill, MatchLink, MatchPlayer, RiotAccount } from '@shared/types'
+import { num, tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { fmtTime } from '../lib/format'
 import { fmtDate, myTeam, toMatch, type AutoClipOptions, type RoundInfo, type TLEvent } from '../lib/match'
@@ -37,7 +38,7 @@ interface Props {
   rounds: RoundInfo[]
   selectedEvent: TLEvent | null
   autoTried: 'idle' | 'loading' | 'done'
-  /** pourquoi la rec n'a pas été liée toute seule */
+  /** why the recording wasn't linked automatically */
   autoNote?: string | null
   onSkipAuto: () => void
   onLink: (match: MatchData, account: RiotAccount) => void
@@ -56,7 +57,7 @@ interface Props {
   previewAutoClips: (opts: AutoClipOptions) => number
 }
 
-/* ------------------------------------------------------------------ Configuration (clé testée + compte vérifié) */
+/* ------------------------------------------------------------------ Setup (tested key + verified account) */
 
 function Setup(): JSX.Element {
   const { settings } = useApp()
@@ -67,24 +68,37 @@ function Setup(): JSX.Element {
         <div className="mp-intro-icon">
           <Link2 size={18} />
         </div>
-        <strong>Relie tes recs à tes matchs</strong>
-        <p>Frag récupère tes kills, tes morts et les rounds via HenrikDev, et les place sur la timeline.</p>
+        <strong>{tr('Link your recordings to your matches', 'Relie tes recs à tes matchs')}</strong>
+        <p>
+          {tr(
+            'Frag pulls your kills, deaths and rounds from HenrikDev and places them on the timeline.',
+            'Frag récupère tes kills, tes morts et les rounds via HenrikDev, et les place sur la timeline.'
+          )}
+        </p>
       </div>
       <div className="mp-steps">
-        <span className={step === 1 ? 'is-on' : 'is-done'}>{step > 1 ? <Check size={11} /> : '1'} Clé API</span>
-        <span className={step === 2 ? 'is-on' : ''}>2 Compte Riot</span>
+        <span className={step === 1 ? 'is-on' : 'is-done'}>
+          {step > 1 ? <Check size={11} /> : '1'} {tr('API key', 'Clé API')}
+        </span>
+        <span className={step === 2 ? 'is-on' : ''}>2 {tr('Riot account', 'Compte Riot')}</span>
       </div>
       {step === 1 ? <KeyField compact /> : <AccountsField compact />}
       <p className="mp-note">
         {step === 1
-          ? 'La clé est testée auprès de HenrikDev avant d’être enregistrée (chiffrée, uniquement sur ton PC).'
-          : 'Ton Riot ID est vérifié : Frag récupère ton identifiant unique et ta région, donc plus besoin de les saisir.'}
+          ? tr(
+              'The key is tested with HenrikDev before it’s saved (encrypted, only on your PC).',
+              'La clé est testée auprès de HenrikDev avant d’être enregistrée (chiffrée, uniquement sur ton PC).'
+            )
+          : tr(
+              'Your Riot ID gets verified: Frag fetches your unique ID and region, so you don’t have to type them.',
+              'Ton Riot ID est vérifié : Frag récupère ton identifiant unique et ta région, donc plus besoin de les saisir.'
+            )}
       </p>
     </div>
   )
 }
 
-/* ------------------------------------------------------------------ Choix du match */
+/* ------------------------------------------------------------------ Match picker */
 
 function MatchRow({ c, account, onPick }: { c: MatchCandidate; account: RiotAccount; onPick: () => void }): JSX.Element {
   const m = c.match
@@ -108,10 +122,12 @@ function MatchRow({ c, account, onPick }: { c: MatchCandidate; account: RiotAcco
       </div>
       {c.linkedElsewhere.length > 0 ? (
         <span className="mp-badge is-muted" title={c.linkedElsewhere.join('\n')}>
-          Déjà liée à {c.linkedElsewhere.length > 1 ? `${c.linkedElsewhere.length} recs` : 'une rec'}
+          {c.linkedElsewhere.length > 1
+            ? tr(`Already linked to ${c.linkedElsewhere.length} recs`, `Déjà liée à ${c.linkedElsewhere.length} recs`)
+            : tr('Already linked to a rec', 'Déjà liée à une rec')}
         </span>
       ) : (
-        c.overlap > 0.5 && <span className="mp-badge">Correspond</span>
+        c.overlap > 0.5 && <span className="mp-badge">{tr('Match', 'Correspond')}</span>
       )}
     </button>
   )
@@ -174,7 +190,7 @@ function Picker({
         </div>
       )}
       <div className="field">
-        <label>Compte</label>
+        <label>{tr('Account', 'Compte')}</label>
         <div className="row gap-6">
           <div className="select-wrap">
             <select
@@ -186,13 +202,13 @@ function Picker({
               {accounts.map((a, i) => (
                 <option key={a.riotId} value={i}>
                   {a.riotId} · {a.region.toUpperCase()}
-                  {a.verified ? '' : ' (non vérifié)'}
+                  {a.verified ? '' : tr(' (not verified)', ' (non vérifié)')}
                 </option>
               ))}
             </select>
             <ChevronDown size={14} />
           </div>
-          <button className="icon-btn is-boxed" onClick={() => load(true)} title="Recharger l’historique">
+          <button className="icon-btn is-boxed" onClick={() => load(true)} title={tr('Reload match history', 'Recharger l’historique')}>
             {loading ? <Loader2 size={15} className="spin" /> : <RefreshCw size={15} />}
           </button>
         </div>
@@ -207,10 +223,15 @@ function Picker({
 
       {list && (
         <div className="mp-cands">
-          <div className="mp-label">Matchs récents</div>
-          {list.length === 0 && <div className="mp-note">Aucun match trouvé pour ce compte.</div>}
+          <div className="mp-label">{tr('Recent matches', 'Matchs récents')}</div>
+          {list.length === 0 && <div className="mp-note">{tr('No matches found for this account.', 'Aucun match trouvé pour ce compte.')}</div>}
           {list.length > 0 && !note && !list.some((c) => c.overlap > 0.5) && (
-            <div className="mp-note">Aucun match ne correspond à l’heure de cette rec : choisis-le dans la liste.</div>
+            <div className="mp-note">
+              {tr(
+                'No match lines up with this recording’s time: pick it from the list.',
+                'Aucun match ne correspond à l’heure de cette rec : choisis-le dans la liste.'
+              )}
+            </div>
           )}
           {list.map((c) => (
             <MatchRow key={c.match.id} c={c} account={account} onPick={() => onLink(c.match, account)} />
@@ -219,12 +240,12 @@ function Picker({
       )}
       {!list && loading && (
         <div className="mp-loading">
-          <Loader2 size={16} className="spin" /> Récupération de tes matchs…
+          <Loader2 size={16} className="spin" /> {tr('Fetching your matches…', 'Récupération de tes matchs…')}
         </div>
       )}
 
       <div className="field mp-byid">
-        <label>Ou colle un match ID</label>
+        <label>{tr('Or paste a match ID', 'Ou colle un match ID')}</label>
         <div className="row gap-6">
           <input
             className="input"
@@ -239,7 +260,7 @@ function Picker({
             disabled={!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(matchId.trim()) || loading}
             onClick={byId}
           >
-            Lier
+            {tr('Link', 'Lier')}
           </button>
         </div>
       </div>
@@ -247,12 +268,12 @@ function Picker({
   )
 }
 
-/* ------------------------------------------------------------------ Match lié */
+/* ------------------------------------------------------------------ Linked match */
 
 function killLabel(k: MatchKill, names: Map<string, MatchPlayer>, me: string): string {
   const killer = names.get(k.killer)
   const victim = names.get(k.victim)
-  const who = (p?: MatchPlayer, id?: string): string => (id === me ? 'Toi' : (p?.name ?? '?'))
+  const who = (p?: MatchPlayer, id?: string): string => (id === me ? tr('You', 'Toi') : (p?.name ?? '?'))
   return `${k.tRound.toFixed(0).padStart(2, ' ')} s · ${who(killer, k.killer)} → ${who(victim, k.victim)}${k.weapon ? ` · ${k.weapon}` : ''}`
 }
 
@@ -267,9 +288,9 @@ function Killfeed({ k, names, me }: { k: MatchKill; names: Map<string, MatchPlay
   return (
     <div className={`kf ${mine ? 'is-mine' : k.victim === me ? 'is-death' : ''}`}>
       <VImg src={ka?.killfeed ?? ka?.icon} className="kf-agent" fallback={<span className="kf-agent is-empty" />} />
-      <span className="kf-name">{k.killer === me ? 'Toi' : killer?.name}</span>
+      <span className="kf-name">{k.killer === me ? tr('You', 'Toi') : killer?.name}</span>
       <VImg src={w?.killfeed} className="kf-weapon" fallback={<span className="kf-weapon-txt">{k.weapon ?? '✕'}</span>} />
-      <span className="kf-name">{k.victim === me ? 'Toi' : victim?.name}</span>
+      <span className="kf-name">{k.victim === me ? tr('You', 'Toi') : victim?.name}</span>
       <VImg src={va?.killfeed ?? va?.icon} className="kf-agent is-victim" fallback={<span className="kf-agent is-empty" />} />
     </div>
   )
@@ -290,7 +311,7 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
 
   const matchNow = toMatch(link, time)
 
-  // Round estimé sous la tête de lecture, pour pré-remplir le calage
+  // Round guessed under the playhead, to prefill the sync
   const guessRound = useMemo(() => {
     let idx = 0
     for (const r of match.rounds) if (r.start !== null && r.start <= matchNow + 20) idx = r.index
@@ -299,7 +320,7 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
   const [roundSel, setRoundSel] = useState<number | null>(null)
   const roundIdx = roundSel ?? guessRound
 
-  // Kill pré-sélectionné : celui choisi sur la timeline, sinon le plus proche de la tête de lecture
+  // Preselected kill: the one picked on the timeline, else the closest to the playhead
   const guessKill = useMemo(() => {
     if (p.selectedEvent?.killIndex !== undefined) return p.selectedEvent.killIndex
     let best = 0
@@ -340,8 +361,8 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
   const teams = useMemo(() => {
     const sorted = [...match.players].sort((a, b) => b.score - a.score)
     return [
-      { id: myTeamId, label: 'Ton équipe', players: sorted.filter((x) => x.team === myTeamId) },
-      { id: 'enemy', label: 'Adversaires', players: sorted.filter((x) => x.team !== myTeamId) }
+      { id: myTeamId, label: tr('Your team', 'Ton équipe'), players: sorted.filter((x) => x.team === myTeamId) },
+      { id: 'enemy', label: tr('Opponents', 'Adversaires'), players: sorted.filter((x) => x.team !== myTeamId) }
     ]
   }, [match.players, myTeamId])
 
@@ -364,8 +385,8 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
             <span>
               {match.mode} · {fmtDate(match.startedAt)}
             </span>
-            <button className="mh-change" onClick={p.onUnlink} title="Lier un autre match">
-              <Unlink size={12} /> Changer
+            <button className="mh-change" onClick={p.onUnlink} title={tr('Link another match', 'Lier un autre match')}>
+              <Unlink size={12} /> {tr('Change', 'Changer')}
             </button>
           </div>
           <div className="mh-bottom">
@@ -377,7 +398,7 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
                   <span>–</span>
                   {team.roundsLost}
                 </strong>
-                <em>{team.won ? 'Victoire' : 'Défaite'}</em>
+                <em>{team.won ? tr('Victory', 'Victoire') : tr('Defeat', 'Défaite')}</em>
               </div>
             )}
           </div>
@@ -409,10 +430,10 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
       ) : (
         <div className="mp-section">
           <div className="field">
-            <label>Quel joueur es-tu ?</label>
+            <label>{tr('Which player are you?', 'Quel joueur es-tu ?')}</label>
             <select className="input" value="" onChange={(e) => p.onSetPuuid(e.target.value)}>
               <option value="" disabled>
-                Choisir…
+                {tr('Choose…', 'Choisir…')}
               </option>
               {match.players.map((pl) => (
                 <option key={pl.puuid} value={pl.puuid}>
@@ -426,19 +447,19 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
 
       <details className="msb">
         <summary>
-          Tableau des scores <ChevronDown size={13} />
+          {tr('Scoreboard', 'Tableau des scores')} <ChevronDown size={13} />
         </summary>
         {teams.map((t) => (
           <div key={t.id ?? 'x'} className="msb-team">
             <div className="msb-label">{t.label}</div>
             {t.players.map((pl) => {
               const a = L.agent(pl.agentId, pl.agent)
-              const tr = L.tier(pl.tier, pl.rank)
+              const rk = L.tier(pl.tier, pl.rank)
               return (
                 <div key={pl.puuid} className={`msb-row ${pl.puuid === link.puuid ? 'is-me' : ''}`}>
                   <VImg src={a?.icon} className="msb-agent" fallback={<span className="msb-agent is-empty" />} />
                   <span className="msb-name">{pl.name}</span>
-                  <VImg src={tr?.icon} className="msb-rank" title={tr?.name} />
+                  <VImg src={rk?.icon} className="msb-rank" title={rk?.name} />
                   <span className="msb-kda">
                     {pl.kills}/{pl.deaths}/{pl.assists}
                   </span>
@@ -451,14 +472,14 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
 
       <div className="mp-section">
         <div className="mp-head">
-          <span className="mp-label">Synchro</span>
+          <span className="mp-label">{tr('Sync', 'Synchro')}</span>
           <span className={`mp-status ${synced ? 'is-ok' : 'is-warn'}`}>
             {synced ? (
               <>
-                <Check size={12} /> Calée · {anchor?.label}
+                <Check size={12} /> {tr('Synced', 'Calée')} · {anchor?.label}
               </>
             ) : (
-              <>Approximative</>
+              <>{tr('Approximate', 'Approximative')}</>
             )}
           </span>
         </div>
@@ -466,7 +487,9 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
         <div className="as">
           <button className="btn btn-ghost btn-sm btn-block" onClick={p.onAutoSync} disabled={p.autoSync.running}>
             {p.autoSync.running ? <Loader2 className="spin" /> : <ScanSearch />}
-            {p.autoSync.running ? `Analyse du killfeed · ${Math.round(p.autoSync.progress * 100)} %` : 'Caler automatiquement'}
+            {p.autoSync.running
+              ? `${tr('Reading the killfeed', 'Analyse du killfeed')} · ${Math.round(p.autoSync.progress * 100)}%`
+              : tr('Auto sync', 'Caler automatiquement')}
           </button>
           {p.autoSync.running && (
             <div className="bar">
@@ -478,17 +501,20 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
               <div className="hk-msg is-ok">
                 <Check />
                 <span>
-                  Calé sur le killfeed · confiance {Math.round(p.autoSync.result.confidence * 100)} % ·{' '}
-                  {p.autoSync.result.kills} kills
+                  {tr('Synced on the killfeed · confidence', 'Calé sur le killfeed · confiance')}{' '}
+                  {Math.round(p.autoSync.result.confidence * 100)}% · {p.autoSync.result.kills} kills
                 </span>
               </div>
             ) : (
               <div className="hk-msg is-warn">
                 <AlertTriangle />
                 <span>
-                  Pas assez sûr (confiance {Math.round(p.autoSync.result.confidence * 100)} %). Cale à la main, ou{' '}
+                  {tr(
+                    `Not sure enough (confidence ${Math.round(p.autoSync.result.confidence * 100)}%). Sync by hand, or`,
+                    `Pas assez sûr (confiance ${Math.round(p.autoSync.result.confidence * 100)} %). Cale à la main, ou`
+                  )}{' '}
                   <button className="inline-action" onClick={p.onApplyAutoSync}>
-                    applique quand même
+                    {tr('apply anyway', 'applique quand même')}
                   </button>
                 </span>
               </div>
@@ -501,22 +527,26 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
             </div>
           )}
         </div>
-        <div className="mp-or">ou à la main</div>
+        <div className="mp-or">{tr('or by hand', 'ou à la main')}</div>
 
         <div className="segmented">
           <button className={mode === 'kill' ? 'is-on' : ''} onClick={() => setMode('kill')}>
-            Sur un kill
+            {tr('On a kill', 'Sur un kill')}
           </button>
           <button className={mode === 'round' ? 'is-on' : ''} onClick={() => setMode('round')}>
-            Début de round
+            {tr('Round start', 'Début de round')}
           </button>
         </div>
 
         {mode === 'kill' ? (
           <>
             <p className="mp-help">
-              Mets la vidéo pile à l’image où le kill <strong>apparaît dans le killfeed</strong>, choisis-le, et valide :
-              tout le match se recale dessus.
+              {tr('Put the video on the exact frame where the kill', 'Mets la vidéo pile à l’image où le kill')}{' '}
+              <strong>{tr('shows up in the killfeed', 'apparaît dans le killfeed')}</strong>
+              {tr(
+                ', pick it, and confirm: the whole match re-syncs on it.',
+                ', choisis-le, et valide : tout le match se recale dessus.'
+              )}
             </p>
             <div className="select-wrap">
               <select
@@ -546,15 +576,19 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
               }}
             >
               <Crosshair size={14} />
-              Caler le match sur ce kill
+              {tr('Sync the match on this kill', 'Caler le match sur ce kill')}
               <span className="btn-meta">{fmtTime(time)}</span>
             </button>
           </>
         ) : (
           <>
             <p className="mp-help">
-              Mets la vidéo pile au moment où les <strong>barrières tombent</strong> (le chrono passe à 1:40), choisis
-              le round, et valide.
+              {tr('Put the video right when the', 'Mets la vidéo pile au moment où les')}{' '}
+              <strong>{tr('barriers drop', 'barrières tombent')}</strong>
+              {tr(
+                ' (the timer hits 1:40), pick the round, and confirm.',
+                ' (le chrono passe à 1:40), choisis le round, et valide.'
+              )}
             </p>
             <div className="row gap-6">
               <div className="select-wrap">
@@ -580,23 +614,27 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
                 }}
               >
                 <Flag size={14} />
-                Le round commence ici
+                {tr('Round starts here', 'Le round commence ici')}
               </button>
             </div>
           </>
         )}
 
         <div className="mp-nudge">
-          <span>Décaler tout</span>
+          <span>{tr('Shift all', 'Décaler tout')}</span>
           {[-1, -0.1, 0.1, 1].map((d) => (
             <button key={d} className="chip-btn" onClick={() => p.onNudge(d)}>
               {d > 0 ? '+' : '−'}
-              {Math.abs(d).toString().replace('.', ',')} s
+              {num(Math.abs(d), Math.abs(d) < 1 ? 1 : 0)} s
             </button>
           ))}
           {synced && (
-            <button className="link-btn" onClick={p.onResetSync} title="Revenir à la synchro approximative">
-              Réinitialiser
+            <button
+              className="link-btn"
+              onClick={p.onResetSync}
+              title={tr('Back to the approximate sync', 'Revenir à la synchro approximative')}
+            >
+              {tr('Reset', 'Réinitialiser')}
             </button>
           )}
         </div>
@@ -604,7 +642,7 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
 
       <div className="mp-section">
         <div className="mp-head">
-          <span className="mp-label">Clips auto</span>
+          <span className="mp-label">{tr('Auto clips', 'Clips auto')}</span>
         </div>
         <div className="row gap-8 mp-auto-opts">
           <div className="segmented">
@@ -617,12 +655,12 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
           <label className="toggle">
             <input type="checkbox" checked={clutches} onChange={(e) => setClutches(e.target.checked)} />
             <span />
-            Clutchs
+            {tr('Clutches', 'Clutchs')}
           </label>
         </div>
         <div className="mp-rolls">
           <label>
-            Avant
+            {tr('Before', 'Avant')}
             <input
               className="input input-num"
               type="number"
@@ -636,7 +674,7 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
             s
           </label>
           <label>
-            Après
+            {tr('After', 'Après')}
             <input
               className="input input-num"
               type="number"
@@ -652,9 +690,15 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
         </div>
         <button className="btn btn-ghost btn-block" disabled={preview === 0} onClick={() => p.onAutoClips(opts)}>
           <Wand2 size={15} />
-          {preview === 0 ? 'Aucun nouveau clip' : preview === 1 ? 'Créer 1 clip' : `Créer ${preview} clips`}
+          {preview === 0
+            ? tr('No new clips', 'Aucun nouveau clip')
+            : preview === 1
+              ? tr('Create 1 clip', 'Créer 1 clip')
+              : tr(`Create ${preview} clips`, `Créer ${preview} clips`)}
         </button>
-        {!synced && <p className="mp-note">Cale la synchro d’abord pour que les clips tombent pile.</p>}
+        {!synced && (
+          <p className="mp-note">{tr('Sync first so the clips land right on time.', 'Cale la synchro d’abord pour que les clips tombent pile.')}</p>
+        )}
       </div>
 
       <div className="mp-section mp-rounds-section">
@@ -670,7 +714,7 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
                 <button
                   className={`mp-round-n ${r.won ? 'is-win' : r.won === false ? 'is-loss' : ''}`}
                   onClick={() => r.start !== null && p.onSeek(Math.max(0, r.start))}
-                  title={outside ? 'Hors de la rec' : 'Aller au début du round'}
+                  title={outside ? tr('Outside the recording', 'Hors de la rec') : tr('Go to the start of the round', 'Aller au début du round')}
                 >
                   {r.n}
                 </button>
@@ -715,12 +759,12 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
                             key={id}
                             className={`mp-kill is-death ${p.selectedEvent?.id === id ? 'is-sel' : ''}`}
                             onClick={() => p.onSelectEvent(id)}
-                            title={`Mort à ${k.tRound.toFixed(0)} s · ${killer?.name ?? ''}`}
+                            title={`${tr('Death at', 'Mort à')} ${k.tRound.toFixed(0)} s · ${killer?.name ?? ''}`}
                           >
                             <VImg
                               src={ka?.killfeed ?? ka?.icon}
                               className="mp-kill-agent"
-                              fallback={<span className="mp-kill-txt">{killer?.name ?? 'Mort'}</span>}
+                              fallback={<span className="mp-kill-txt">{killer?.name ?? tr('Death', 'Mort')}</span>}
                             />
                           </button>
                         )
@@ -750,10 +794,10 @@ export default function MatchPanel(p: Props): JSX.Element {
       ) : p.autoTried === 'loading' ? (
         <div className="mp-loading is-block is-col">
           <span className="row gap-8">
-            <Loader2 size={16} className="spin" /> Recherche du match de cette rec…
+            <Loader2 size={16} className="spin" /> {tr('Looking for this recording’s match…', 'Recherche du match de cette rec…')}
           </span>
           <button className="link-btn" onClick={p.onSkipAuto}>
-            Choisir moi-même
+            {tr('I’ll pick it myself', 'Choisir moi-même')}
           </button>
         </div>
       ) : (
@@ -761,7 +805,7 @@ export default function MatchPanel(p: Props): JSX.Element {
       )}
       {configured && (
         <button className="mp-key link-btn" onClick={() => useApp.getState().setSettingsOpen(true)}>
-          <KeyRound size={12} /> Clé et comptes dans les réglages
+          <KeyRound size={12} /> {tr('Key and accounts in Settings', 'Clé et comptes dans les réglages')}
         </button>
       )}
     </div>
