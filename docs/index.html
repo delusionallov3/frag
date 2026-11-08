@@ -960,6 +960,40 @@
   })
 })()
 </script>
+<script>
+/* Opened straight from the disk (file://), browsers refuse the module scripts above, so the tabs and the phone
+   menu would sit dead. When system.js has not started by then, these two small handlers take over. */
+addEventListener('load', () => setTimeout(() => {
+  const root = document.documentElement
+  if (root.dataset.ready || root.dataset.tone) return
+  document.querySelectorAll('[role="tablist"]').forEach((list) => {
+    const tabs = [...list.querySelectorAll('[role="tab"]')]
+    const parts = (t) => (t.getAttribute('aria-controls') || '').split(/\s+/).map((id) => document.getElementById(id)).filter(Boolean)
+    const select = (tab) => tabs.forEach((t) => {
+      const on = t === tab
+      t.setAttribute('aria-selected', String(on))
+      t.tabIndex = on ? 0 : -1
+      parts(t).forEach((el) => (el.hidden = !on))
+    })
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(t))
+      t.addEventListener('keydown', (e) => {
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+        if (!d) return
+        const n = tabs[(i + d + tabs.length) % tabs.length]
+        select(n); n.focus()
+      })
+    })
+  })
+  const nav = document.querySelector('header.nav'), toggle = nav && nav.querySelector('.nav__toggle')
+  if (toggle) {
+    const setOpen = (o) => { nav.classList.toggle('is-open', o); toggle.setAttribute('aria-expanded', String(o)); document.body.classList.toggle('nav-locked', o) }
+    toggle.addEventListener('click', () => setOpen(!nav.classList.contains('is-open')))
+    nav.addEventListener('click', (e) => { if (nav.classList.contains('is-open') && e.target.closest('a[href]')) setOpen(false) })
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false) })
+  }
+}, 600))
+</script>
 <script type="module" src="assets/system.js"></script>
 <script type="module" src="assets/motion/motion.js"></script>
 <script type="module" src="assets/layout/layout.js"></script>
