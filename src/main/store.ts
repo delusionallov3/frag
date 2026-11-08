@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS: Settings = {
   hasHenrikKey: false,
   minLinkMinutes: 5,
   hideShortRecs: false,
-  obs: { enabled: false, host: '127.0.0.1', port: 4455, startOn: 'ingame', stopDelay: 8, autoLink: true, renameRecs: true },
+  obs: { enabled: false, host: '127.0.0.1', port: 4455, startOn: 'ingame', stopDelay: 8, autoLink: true, renameRecs: true, markKey: 'F9' },
   hasObsPassword: false,
   closeToTray: true,
   launchAtLogin: false,

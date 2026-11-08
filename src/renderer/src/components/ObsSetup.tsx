@@ -5,6 +5,8 @@ import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 
 const STOP_DELAYS = [0, 5, 10, 20]
+/** Keys offered to mark a moment in game (F keys: free in Valorant, safe over the game) */
+const MARK_KEYS: (string | null)[] = [null, 'F7', 'F8', 'F9', 'F10']
 const SHORT_MINUTES = [1, 3, 5, 10]
 
 function sameFolder(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -218,6 +220,25 @@ export function ObsSettingsSection(): JSX.Element | null {
               <span />
               {tr('Rename the recording at the end (map · mode · score)', 'Renommer la rec à la fin (map · mode · score)')}
             </label>
+
+            <div className="obs-grid">
+              <span>{tr('Mark a moment', 'Marquer un moment')}</span>
+              <div className="segmented">
+                {MARK_KEYS.map((k) => (
+                  <button key={k ?? 'off'} className={(obs.markKey ?? null) === k ? 'is-on' : ''} onClick={() => void patch({ markKey: k })}>
+                    {k ?? tr('Off', 'Non')}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="obs-help">
+              {obs.markKey
+                ? tr(
+                    `Press ${obs.markKey} during a game: when the recording ends, the moment is a marker and a ready-made clip (the 10 seconds before, 2 after).`,
+                    `Appuie sur ${obs.markKey} pendant une game : à la fin de la rec, le moment est un marqueur et un clip prêt (les 10 secondes d’avant, 2 après).`
+                  )
+                : tr('Pick a key to mark moments while you play.', 'Choisis une touche pour marquer des moments en jouant.')}
+            </p>
             <p className="obs-help">
               {tr(
                 'During the game, Frag notes the end of every round: it drops markers in the recording and syncs it on its own once linked to the match. It never touches a recording you started yourself, and skips the Range.',

@@ -36,8 +36,9 @@ let notify: (s: AutoRecStatus) => void = () => {}
 let onLinked: (path: string) => void = () => {}
 let onFiles: () => void = () => {}
 
-/* While recording: round ends (score from the Riot client) and game info */
+/* While recording: round ends (score from the Riot client), moments marked with the key, and game info */
 let recRounds: RecRound[] = []
+let recMarks: number[] = []
 let lastScore: { ally: number; enemy: number } | null = null
 let lastGame: GameInfo | null = null
 const NO_ROUNDS = new Set(['deathmatch', 'ggteam', 'hurm', 'snowball'])
@@ -56,6 +57,19 @@ function set(patch: Partial<AutoRecStatus>): void {
   notify(status)
 }
 
+/**
+ * The mark key was pressed: note the moment in the current recording (it becomes a marker and a clip
+ * when the recording ends). Returns false when nothing is recording.
+ */
+export function markMoment(): boolean {
+  if (!status.recording || !status.recStartedAt) return false
+  const t = Math.max(0, (Date.now() - status.recStartedAt) / 1000)
+  recMarks.push(t)
+  const mm = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`
+  set({ last: tr(`Moment marked at ${mm}`, `Moment marqué à ${mm}`) })
+  return true
+}
+
 export function autoRecStatus(): AutoRecStatus {
   return status
 }
@@ -70,6 +84,7 @@ client.on('event', (type: string, data: Record<string, unknown>) => {
   const state = String(data.outputState ?? '')
   if (state === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
     recRounds = []
+    recMarks = []
     lastScore = null
     lastGame = null
     set({ recording: true, recStartedAt: Date.now() })
@@ -78,12 +93,14 @@ client.on('event', (type: string, data: Record<string, unknown>) => {
     const start = status.recStartedAt
     const own = status.ownRecording
     const rounds = recRounds
+    const marks = recMarks
     const game = lastGame
     recRounds = []
+    recMarks = []
     lastScore = null
     lastGame = null
     set({ recording: false, ownRecording: false, recStartedAt: null, stopAt: null })
-    if (path && start) void finished(path, start, own, rounds, game)
+    if (path && start) void finished(path, start, own, rounds, game, marks)
   }
 })
 
@@ -353,7 +370,11 @@ async function renameAfterGame(path: string, start: number, game: GameInfo, roun
   return path
 }
 
-async function finished(path: string, start: number, own: boolean, rounds: RecRound[], game: GameInfo | null): Promise<void> {
+/** Seconds kept before / after a moment marked with the key (like C in the editor: the last 10 seconds) */
+const MARK_BEFORE = 10
+const MARK_AFTER = 2
+
+async function finished(path: string, start: number, own: boolean, rounds: RecRound[], game: GameInfo | null, marks: number[]): Promise<void> {
   const s = await getSettings()
   const final = own && s.obs.renameRecs && game ? await renameAfterGame(path, start, game, rounds) : path
   await setRecMeta({ path: final, start, end: Date.now(), by: own ? 'frag' : 'obs', rounds }).catch(() => {})
@@ -365,6 +386,17 @@ async function finished(path: string, start: number, own: boolean, rounds: RecRo
       ...rounds.map((r) => ({ id: `round-${r.round}`, time: r.t, label: `${tr('End of round', 'Fin du round')} ${r.round + 1} · ${r.ally}-${r.enemy}` }))
     ]
     await saveProject({ ...project, markers }).catch(() => {})
+  }
+  // Moments marked with the key: a marker and a ready-made clip each
+  if (marks.length) {
+    const project = await getProject(final)
+    const label = tr('Marked in game', 'Marqué en game')
+    const markers = [...project.markers, ...marks.map((t, i) => ({ id: `mark-${i}-${Math.round(t)}`, time: t, label }))]
+    const clips = [
+      ...project.clips,
+      ...marks.map((t, i) => ({ id: `mark-${i}-${Math.round(t)}`, name: `${label} ${i + 1}`, start: Math.max(0, t - MARK_BEFORE), end: t + MARK_AFTER }))
+    ]
+    await saveProject({ ...project, markers, clips }).catch(() => {})
   }
   onFiles()
   path = final

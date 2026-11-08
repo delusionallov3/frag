@@ -93,6 +93,8 @@ export interface ObsSettings {
   autoLink: boolean
   /** rename the recording when the game ends (map · mode · score) */
   renameRecs: boolean
+  /** global key that marks a moment during a recording (Electron accelerator, "F9"); null = off */
+  markKey: string | null
 }
 
 export type ObsConn = 'off' | 'connecting' | 'ready' | 'auth' | 'error'
@@ -469,6 +471,12 @@ export interface MotionOptions {
   wipeLabels: boolean
   /** zoom on every kill */
   punch: 'off' | 'soft' | 'strong'
+  /** the last kill of an ace or a clutch in slow motion */
+  slowmo: boolean
+  /** a music track under the whole montage, ducked when the game is loud; null = none */
+  music: string | null
+  /** music level, 0..1 */
+  musicVolume: number
 }
 
 export interface MontageOptions {
