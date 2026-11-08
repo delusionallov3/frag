@@ -235,6 +235,7 @@
   .exp__bar i { display: block; height: 100%; background: #ff4655; }
   .exp__foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid rgb(237 237 237 / .08); color: var(--fx-muted); font-size: 12px; }
   .exp__foot .ic { --ic-s: 18px; }
+  .exp__foot .ic-wide { box-sizing: content-box; height: 10px; padding: 4px 6px; border-radius: 4px; background: #ededed; }
   /* review, stats, montage */
   .tour .fx-ui { left: 40px; right: 40px; top: 40px; }
   .tp p { font-size: var(--t-body); line-height: 1.6; max-width: 46ch; }
@@ -342,6 +343,53 @@
   .close__word { line-height: 1.04; }
   @media (max-width: 1279px) { .rd .kl:nth-of-type(n+3) { display: none; } .mp__rounds .rd:nth-child(n+6) { display: none; } }
   @media (max-width: 1023px) { .mp__rounds .rd:nth-child(n+4) { display: none; } }
+
+  /* ------------------------------------------------ motion: one curve, short durations (Emil: ease-out for entries, linear for progress) */
+  :root { --ease-out: cubic-bezier(.23, 1, .32, 1); }
+  .ui-win__crumb .frag-mark { width: 16px; height: 16px; margin-right: 2px; }
+
+  /* tabs: the chosen screen settles in (opacity, a 6px rise, a little blur that clears) */
+  .tour .fx-ui:not([hidden]) { animation: tour-in 320ms var(--ease-out) both; }
+  @keyframes tour-in { from { opacity: 0; transform: translateY(6px); filter: blur(3px); } }
+  .tab { transition-property: background-color, color, border-color, transform; transition-duration: 180ms; transition-timing-function: var(--ease-out); }
+
+  /* the drawn windows answer the pointer like the app does */
+  @media (hover: hover) and (pointer: fine) {
+    .ui-win__row, .rd, .files__row, .exp__row, .sk__list li, .set__row, .tray__menu > span, .mon__list div { transition: background-color 160ms var(--ease-out); }
+    .ui-win__row:hover, .rd:hover, .sk__list li:hover { background: color-mix(in oklab, #ededed 4%, transparent); }
+    .files__row:hover, .exp__row:hover, .set__row:hover, .tray__menu > span:hover, .mon__list div:hover { background: color-mix(in oklab, #ededed 5%, transparent); }
+    .kl, .tag { transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out); }
+    .kl:hover { background: var(--u-fill-3); }
+    .mp__cut, .mon__btn, .notif__btn { transition: transform 160ms var(--ease-out), filter 160ms var(--ease-out); }
+    .mp__cut:hover, .mon__btn:hover { filter: brightness(1.08); }
+  }
+
+  /* keycaps press for real: every C, N, I, O, J, L, E or M typed on the page presses its cap */
+  kbd.cap { transition: transform 90ms ease-out, box-shadow 90ms ease-out, background-color 160ms var(--ease-out); }
+  kbd.cap.is-down { transform: translateY(2px); box-shadow: inset 0 0 0 1px rgb(237 237 237 / .2), inset 0 -1px 0 rgb(0 0 0 / .45); background: #2e2e31; }
+  kbd.cap.is-key.is-down { background: #ff5a68; }
+  .sk__list li { transition: background-color 200ms var(--ease-out); }
+  .sk__list li.is-hit { background: rgb(255 70 85 / .08); }
+
+  /* life signs: the REC dot breathes (a ring that grows and fades, 2.4 s), exports keep exporting */
+  .rec__live i { position: relative; }
+  .rec__live i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1px solid currentColor; animation: rec-ring 2.4s var(--ease-out) infinite; }
+  @keyframes rec-ring { from { transform: scale(1); opacity: .8; } to { transform: scale(2.6); opacity: 0; } }
+  .exp__bar i { transform-origin: left; }
+  .exp__row.is-run .exp__bar i { width: 100% !important; animation: exp-run 3.6s linear infinite; }
+  .exp__row.is-run em { opacity: 0; }
+  .fe__key kbd.is-down { transform: translateY(3px); box-shadow: 0 0 0 #8d8d93; }
+  @keyframes exp-run { 0% { transform: scaleX(var(--from, .2)); } 85%, 100% { transform: scaleX(1); } }
+  .exp:hover .exp__row.is-run .exp__bar i, .exp.is-paused .exp__row.is-run .exp__bar i { animation-play-state: paused; }
+
+  /* the language switch: changed words clear in, they never just snap */
+  .is-swapping { animation: lang-in 260ms var(--ease-out) both; }
+  @keyframes lang-in { from { opacity: .2; filter: blur(2px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tour .fx-ui:not([hidden]), .is-swapping, .rec__live i::after, .exp__row.is-run .exp__bar i { animation: none !important; }
+    .exp__row.is-run .exp__bar i { width: var(--w) !important; }
+  }
   .legal-note { max-width: 88ch; color: var(--muted); font-size: 13px; line-height: 1.55; }
 </style>
 </head>
@@ -549,8 +597,8 @@
             <div class="stage"><div class="ui fx-ui exp" aria-hidden="true"><div class="fx-card">
               <div class="exp__head"><b>Exports</b><span>2 / 3</span></div>
               <div class="exp__row"><span class="ch">NVENC</span><span>R7 · 3K</span><em>100%</em><span class="exp__bar"><i style="width:100%"></i></span></div>
-              <div class="exp__row"><span class="ch">NVENC</span><span>R12 · ACE</span><em>62%</em><span class="exp__bar"><i style="width:62%"></i></span></div>
-              <div class="exp__row"><span class="ch">COPY</span><span>R22 · 1v3</span><em>18%</em><span class="exp__bar"><i style="width:18%"></i></span></div>
+              <div class="exp__row is-run" style="--from:.62;--w:62%"><span class="ch">NVENC</span><span>R12 · ACE</span><em>62%</em><span class="exp__bar"><i style="width:62%"></i></span></div>
+              <div class="exp__row is-run" style="--from:.18;--w:18%"><span class="ch">COPY</span><span>R22 · 1v3</span><em>18%</em><span class="exp__bar"><i style="width:18%"></i></span></div>
               <div class="exp__foot"><img class="ic ic-wide" src="assets/icons/nvidia.svg" alt="" width="40" height="8" loading="lazy"><img class="ic" src="assets/icons/discord.svg" alt="" width="18" height="14" loading="lazy"><span data-i18n="feat.exp.mix">Mixed for Discord</span></div>
             </div></div></div>
           </div>
@@ -619,7 +667,7 @@
       <div class="grid">
         <h2 class="span-5" id="keys-h" data-i18n="keys.title">A shortcut for every step</h2>
         <div class="span-6 start-7 stack-4">
-          <p class="t-lead muted" data-i18n="keys.sub">Jump from kill to kill and keep the good ones without touching the mouse. QWERTY by default; pick AZERTY in Settings and the symbol keys follow.</p>
+          <p class="t-lead muted" data-i18n="keys.sub">Jump from kill to kill and keep the good ones without touching the mouse. QWERTY by default; pick AZERTY in Settings and the symbol keys follow. Type C, N or E here to press them.</p>
           <p><a class="link" href="#faq" data-i18n="keys.link">Read about AZERTY</a></p>
         </div>
       </div>
@@ -761,7 +809,7 @@
     'feat.sta.t': 'Suit tes stats', 'feat.sta.p': 'K/D game après game, ADR, duels d’ouverture et clutchs, par agent et par map.', 'feat.sta.kd': 'K/D, 9 dernières games',
     'feat.mon.t': 'Monte tes montages', 'feat.mon.p': 'Des clips de n’importe quelle game dans ton ordre, un carton titre et un fondu, en un export.',
     'keys.title': 'Un raccourci pour chaque étape',
-    'keys.sub': 'Saute de kill en kill et garde les bons sans toucher la souris. QWERTY par défaut ; choisis AZERTY dans les réglages et les touches à symboles suivent.',
+    'keys.sub': 'Saute de kill en kill et garde les bons sans toucher la souris. QWERTY par défaut ; choisis AZERTY dans les réglages et les touches à symboles suivent. Tape C, N ou E ici pour les enfoncer.',
     'keys.link': 'Lire la réponse sur l’AZERTY',
     'keys.c': 'Clip des 10 dernières secondes', 'keys.n': 'Kill suivant, avec Maj le précédent', 'keys.io': 'Début et fin du clip', 'keys.jl': 'Reculer ou avancer de 5 secondes',
     'keys.sp': 'Lecture ou pause', 'keys.win': 'Raccourcis clavier', 'keys.aria': 'La fenêtre des raccourcis de Frag : C clippe les 10 dernières secondes, N passe au kill suivant, I et O posent les bords du clip, E exporte.',
@@ -795,13 +843,15 @@
   ariaEls.forEach((el) => (EN[el.dataset.i18nAria] = el.getAttribute('aria-label')))
   const UI = { en: { lang: 'Language', pause: 'Pause the demo', play: 'Play the demo', title: document.title }, fr: { lang: 'Langue', pause: 'Mettre la démo en pause', play: 'Lancer la démo', title: 'Frag : un éditeur de clips Valorant pour Windows' } }
   let lang = 'en'
-  const setLang = (l) => {
+  const setLang = (l, animate) => {
     lang = l === 'fr' ? 'fr' : 'en'
     const dict = lang === 'fr' ? FR : EN
     document.documentElement.lang = lang
     document.title = UI[lang].title
-    textEls.forEach((el) => { const v = dict[el.dataset.i18n] ?? EN[el.dataset.i18n]; if (v !== undefined && el.textContent !== v) el.textContent = v })
-    htmlEls.forEach((el) => { const v = dict[el.dataset.i18nHtml] ?? EN[el.dataset.i18nHtml]; if (v !== undefined && el.innerHTML !== v) el.innerHTML = v })
+    const swapped = []
+    textEls.forEach((el) => { const v = dict[el.dataset.i18n] ?? EN[el.dataset.i18n]; if (v !== undefined && el.textContent !== v) { el.textContent = v; swapped.push(el) } })
+    htmlEls.forEach((el) => { const v = dict[el.dataset.i18nHtml] ?? EN[el.dataset.i18nHtml]; if (v !== undefined && el.innerHTML !== v) { el.innerHTML = v; swapped.push(el) } })
+    if (animate) swapped.forEach((el) => { el.classList.remove('is-swapping'); void el.offsetWidth; el.classList.add('is-swapping') })
     ariaEls.forEach((el) => { const v = dict[el.dataset.i18nAria] ?? EN[el.dataset.i18nAria]; if (v !== undefined) el.setAttribute('aria-label', v) })
     document.querySelectorAll('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)))
     document.querySelector('.lang').setAttribute('aria-label', UI[lang].lang)
@@ -809,7 +859,8 @@
     renderSize()
     if (window.fragDemo) window.fragDemo.relabel()
   }
-  document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)))
+  document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang, true)))
+  document.addEventListener('animationend', (e) => { if (e.animationName === 'lang-in') e.target.classList.remove('is-swapping') })
 
   /* ------------------------------------------------------------ latest release: version, .exe link and size */
   let sizeInfo = null
@@ -833,6 +884,30 @@
       renderSize()
     })
     .catch(() => {})
+
+  /* ------------------------------------------------------------ anchor links glide; keyboard focus still jumps at once */
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]')
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return
+    const t = document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)))
+    if (!t || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    e.preventDefault()
+    t.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    history.pushState(null, '', a.getAttribute('href'))
+  })
+
+  /* ------------------------------------------------------------ typed keys press their caps */
+  const capsFor = (k) => [...document.querySelectorAll('kbd.cap, .fe__key kbd')].filter((c) => c.textContent.trim().toLowerCase() === k)
+  addEventListener('keydown', (e) => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e.target.closest && e.target.closest('input, textarea, [contenteditable]'))) return
+    const k = e.key.toLowerCase()
+    if (!/^[cnijolem]$/.test(k)) return
+    capsFor(k).forEach((c) => {
+      c.classList.add('is-down')
+      const row = c.closest('li'); if (row) row.classList.add('is-hit')
+      setTimeout(() => { c.classList.remove('is-down'); if (row) setTimeout(() => row.classList.remove('is-hit'), 220) }, 140)
+    })
+  })
 
   /* ------------------------------------------------------------ the editor demo */
   const $ = (s) => document.querySelector(s)
