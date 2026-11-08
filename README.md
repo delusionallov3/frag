@@ -1,149 +1,101 @@
-# Frag
+<p align="center">
+  <img src=".github/assets/banner.svg" alt="Frag" width="100%">
+</p>
 
-Découpe tes recs Valorant en clips, vite et proprement. Tout tourne en local, rien n'est envoyé en ligne.
+<p align="center">
+  <a href="https://github.com/delusionallov3/frag/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/delusionallov3/frag?style=flat-square&label=release&color=ff4655"></a>
+  <a href="https://github.com/delusionallov3/frag/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/delusionallov3/frag/total?style=flat-square&color=2b2b2e"></a>
+  <img alt="Version" src="https://img.shields.io/github/package-json/v/delusionallov3/frag?style=flat-square&color=2b2b2e">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-2b2b2e?style=flat-square&logo=windows&logoColor=white">
+  <img alt="Electron" src="https://img.shields.io/github/package-json/dependency-version/delusionallov3/frag/dev/electron?style=flat-square&logo=electron&logoColor=white&color=2b2b2e">
+  <img alt="React" src="https://img.shields.io/github/package-json/dependency-version/delusionallov3/frag/dev/react?style=flat-square&logo=react&logoColor=white&color=2b2b2e">
+  <img alt="TypeScript" src="https://img.shields.io/github/package-json/dependency-version/delusionallov3/frag/dev/typescript?style=flat-square&logo=typescript&logoColor=white&color=2b2b2e">
+</p>
 
-## Lancer l'app
+<p align="center">
+  <b>Turn your Valorant recordings into clips in a few keystrokes.</b><br>
+  Frag records your games with OBS, links each recording to its match, puts your kills on the timeline<br>
+  and exports frame-accurate clips with NVENC. Everything runs on your PC.
+</p>
 
-Il faut [Node.js](https://nodejs.org) (version 20 ou plus).
+<p align="center">
+  <a href="https://github.com/delusionallov3/frag/releases/latest"><b>Download for Windows</b></a>
+</p>
+
+---
+
+## What it does
+
+- **Records for you.** Frag watches Valorant and tells OBS to start when the game loads and stop when you're back in the menus. You don't press anything.
+- **Knows what happened.** Each recording is matched to its game through the HenrikDev API. Kills, deaths, plants and rounds land on the timeline, synced to the frame.
+- **Clips in one key.** Press `C` and you get the last 10 seconds. Or let Frag cut every 3K, ace and clutch for you.
+- **Exports fast.** Frame-accurate cuts on your Nvidia GPU, or instant lossless cuts. Keep your audio tracks split or mix them for Discord.
+- **Helps you get better.** The Review tab plays back your deaths, first deaths, untraded deaths and lost clutches. Tag your mistakes and the Stats page shows what keeps happening.
+- **Makes montages.** Pick clips from any game, add a title card, export.
+- **Stays out of the way.** Close the window and Frag keeps running in the tray. You get a notification when a game is linked or when OBS isn't open.
+
+Frag is available in English and French, and updates itself from GitHub releases.
+
+## Getting started
+
+1. Grab `Frag-Setup-x.y.z.exe` from the [latest release](https://github.com/delusionallov3/frag/releases/latest) and run it.
+   Windows may say it protected your PC: click **More info → Run anyway** (the app isn't code-signed).
+2. Pick the folder where OBS saves your recordings.
+3. Optional but worth it:
+   - **Auto-record:** in OBS, open *Tools → WebSocket Server Settings*, enable the server and copy the password into Frag's settings.
+   - **Match data:** get a free key at [api.henrikdev.xyz](https://api.henrikdev.xyz/dashboard/), paste it in Settings and add your Riot ID.
+
+That's it. Play a game, come back, your recording is there and already linked.
+
+## Shortcuts
+
+| Key | Action |
+| --- | --- |
+| `Space` | Play / pause |
+| `←` `→` | Frame by frame (`Shift` for ± 1 s) |
+| `J` `L` | ± 5 s |
+| `C` | Clip the last 10 seconds |
+| `I` `O` | Set clip start / end |
+| `M` | Drop a marker |
+| `N` | Next kill (`Shift` for previous) |
+| `E` | Export the selected clip (`Shift` for all checked clips) |
+| `Ctrl` `Z` | Undo |
+| `?` | All shortcuts |
+
+Shortcuts are QWERTY by default. On an AZERTY keyboard, switch the layout in Settings and the symbol keys follow.
+
+## Build from source
+
+You need [Node.js](https://nodejs.org) 20 or later.
 
 ```bash
 npm install
-npm run dev
+npm run dev        # run the app with hot reload
+npm run typecheck  # type checks
+npm run dist       # build the Windows installer into release/
 ```
 
-`npm install` télécharge aussi Electron et FFmpeg, rien d'autre à installer.
-
-Pour fabriquer un installeur Windows avec l'icône de Frag (`release/Frag-Setup-0.1.0.exe`) :
-
-```bash
-npm run dist
-```
-
-L'icône est dans `build/icon.ico` (remplace-la par la tienne si tu veux, en gardant le même nom). Pour changer le numéro de version, modifie `version` dans `package.json`. Tes réglages, clips et matchs liés restent dans `%APPDATA%\Frag` : la version installée les retrouve.
-
-## Mises à jour
-
-Frag vérifie tout seul les nouvelles versions sur les [releases GitHub](https://github.com/delusionallov3/frag/releases) (au lancement puis toutes les 4 h), les télécharge en arrière-plan et les installe quand tu le quittes. Une notification et le menu de la zone de notification proposent aussi de redémarrer tout de suite. Réglages → **Mises à jour** pour voir ta version ou vérifier à la main.
-
-Pour publier une version :
-
-1. Change `version` dans `package.json`, commite, puis `git tag vX.Y.Z` et pousse le tag.
-2. `npm run dist`.
-3. Crée une release GitHub sur ce tag et joins les trois fichiers de `release/` : `Frag-Setup-X.Y.Z.exe`, `Frag-Setup-X.Y.Z.exe.blockmap` et `latest.yml` (c'est lui que Frag lit pour savoir qu'une version existe).
-
-## Comment ça marche
-
-1. Au premier lancement, choisis le dossier où OBS enregistre tes games. Frag le surveille et chaque nouvelle rec apparaît toute seule quand tu arrêtes l'enregistrement.
-2. Ouvre une rec, regarde ta game. Au moment d'une action, appuie sur **C** : ça crée un clip des 10 dernières secondes.
-3. Ajuste avec **I** (début) / **O** (fin), ou en tirant les bords du clip sur la timeline.
-4. **Maj + E** exporte tous les clips cochés. Ils arrivent dans `<dossier des recs>\Clips`.
-
-Les clips et marqueurs sont sauvegardés automatiquement : tu peux fermer et revenir plus tard.
-
-## Lier une rec à son match (HenrikDev)
-
-1. Onglet **Match** dans l'éditeur : colle ta clé API HenrikDev (gratuite sur https://api.henrikdev.xyz/dashboard/) et ton Riot ID.
-2. Frag compare l'heure de début de la rec (le nom du fichier OBS) avec ton historique et lie automatiquement le bon match. Sinon, choisis-le dans la liste ou colle un match ID.
-3. **Cale la synchro**, au choix :
-   - **Sur un kill** (le plus précis) : mets la vidéo pile à l'image où un kill apparaît dans le killfeed, choisis ce kill dans la liste (l'aperçu ressemble au killfeed du jeu) et clique « Caler tout le match sur ce kill ».
-   - **Début de round** : mets la vidéo quand les barrières tombent (chrono à 1:40), choisis le round, « Le round commence ici ».
-   Chaque calage recale tout le match et remplace le précédent. Ajuste ensuite au besoin avec ±0,1 s / ±1 s.
-4. Tes kills (losanges rouges), tes morts et les plants apparaissent sur la timeline. `N` / `Maj + N` pour sauter de kill en kill.
-5. **Clips auto** : choisis 1K+, 2K+ ou 3K+, active les clutchs, règle les secondes avant / après, et Frag crée les clips nommés (`R7 · 3K · Vandal`, `R12 · ACE · Clutch 1v4`…).
-
-Les visuels (agents, maps, armes, rangs) viennent de [valorant-api.com](https://valorant-api.com) et sont gardés en cache sur ton PC.
-
-Pas envie de caler à la main ? **Caler automatiquement** analyse le killfeed (en haut à droite de l'écran) et fait correspondre chaque nouvelle ligne avec les kills du match. Si l'app n'est pas sûre d'elle, elle n'applique rien et te le dit.
-
-## Enregistrement auto (OBS)
-
-Réglages → **Enregistrement auto** : Frag lance l'enregistrement d'OBS quand ta game commence et l'arrête quand tu reviens au menu, puis lie la rec à son match dès que HenrikDev le connaît (en général 1 à 5 minutes après la fin).
-
-1. Dans OBS : **Outils → Paramètres du serveur WebSocket**, coche « Activer le serveur WebSocket », puis « Afficher les informations de connexion » pour copier le mot de passe.
-2. Dans Frag : active l'option, colle le mot de passe, **Tester la connexion**. Si OBS enregistre ailleurs que ton dossier de recs, Frag propose de l'utiliser.
-3. Choisis quand démarrer (chargement de la game ou sélection d'agent) et quand arrêter.
-
-Pendant la game, Frag note chaque fin de round (le score lu sur le client Riot) : la rec arrive avec un marqueur par round, elle est renommée `2026-11-07 16-47-31 · Ascent · Swiftplay · 5-3.mp4`, et une fois liée au match elle est calée toute seule sur ces fins de round (à une seconde près environ ; « Caler automatiquement » ou un kill pour être à l'image près).
-
-Frag lit l'état de Valorant sur le client Riot de ton PC (menus / sélection d'agent / en game), rien ne sort en ligne. Il ne touche pas à un enregistrement lancé à la main et ne filme pas le stand de tir. L'état s'affiche en haut à droite (« OBS prêt », « REC 12:34 »…).
-
-## En arrière-plan
-
-Fermer la fenêtre ne quitte pas Frag : il reste dans la zone de notification (près de l'horloge) pour que l'enregistrement auto continue. Clic sur l'icône pour rouvrir la fenêtre, clic droit pour l'état de l'enregistrement, les dossiers des recs et des clips, ou **Quitter**. Pendant une rec, l'icône prend un point rouge.
-
-Frag t'envoie une notification Windows quand :
-
-- Valorant est lancé mais pas OBS (clic pour lancer OBS) ;
-- une rec vient d'être liée à son match (clic pour l'ouvrir) ;
-- la file d'export est terminée (clic pour ouvrir le dossier).
-
-Dans les réglages, section **Arrière-plan** : garder ou non Frag dans la zone de notification en fermant, le lancer (caché) au démarrage de Windows, couper les notifications. Relancer Frag alors qu'il tourne déjà réaffiche simplement la fenêtre.
-
-## Recs courtes et recs de test
-
-Une rec plus courte que le seuil choisi dans les réglages (5 min par défaut), ou qui ne filme qu'une petite partie du match, n'est jamais liée toute seule : tu peux toujours la lier à la main. Dans la bibliothèque, tu peux masquer les recs courtes, et l'icône corbeille (au survol d'une rec) l'envoie dans la corbeille de Windows. Si deux recs sont liées au même match, les Stats ne le comptent qu'une fois.
-
-## Revoir tes games pour progresser
-
-Onglet **Revoir** dans l'éditeur (match lié) : des playlists qui enchaînent automatiquement les passages à revoir.
-
-- **Mes morts** : chaque mort, de 6 s avant à 2 s après
-- **Premières morts** : tu es le premier à tomber dans le round
-- **Non tradées** : personne n'a tué ton tueur dans les 3 s
-- **Clutchs ratés** : seul en vie face à au moins un ennemi, round perdu
-- **Avantage perdu** : ton équipe a fait le first blood mais a perdu le round
-
-Sur chaque passage, tague l'erreur (« Peek seul », « Mauvais placement », « Pas d'utilitaire »…) et écris ce que tu aurais dû faire. `,` / `.` pour passer au précédent / suivant.
-
-## Stats
-
-Onglet **Stats** en haut : victoires, K/D, ADR, headshots, courbe de ton K/D game après game, duels d'ouverture, morts non tradées, clutchs, tableaux par agent et par map, et tes erreurs les plus fréquentes d'après tes tags.
-
-## Montage
-
-Bouton **Montage** dans la bibliothèque : choisis des clips de n'importe quelles recs, mets-les dans l'ordre, choisis la transition (coupe sèche, fondu court ou long) et des cartons titres en option, puis exporte.
-
-### Clé et quota HenrikDev
-
-Dans les réglages : la clé est testée avant d'être enregistrée, le quota de requêtes par minute est réglable (30 pour une clé Basic, 90 Advanced, plus pour les offres Premium) et Frag ne le dépasse jamais. Chaque Riot ID ajouté est vérifié auprès de Riot (PUUID, région, niveau).
-
-## Raccourcis
-
-| Touche | Action |
-| --- | --- |
-| Espace | Lecture / pause |
-| ← / → | Image par image |
-| Maj + ← / → | ± 1 s |
-| J / L | ± 5 s |
-| ↑ / ↓ | Marqueur ou bord de clip précédent / suivant |
-| N / Maj + N | Kill suivant / précédent (match lié) |
-| , / . | Passage précédent / suivant (onglet Revoir) |
-| C | Nouveau clip des 10 dernières secondes |
-| I / O | Début / fin du clip sélectionné (crée un clip si aucun n'est sélectionné) |
-| Tab | Clip suivant |
-| Entrée | Lire le clip sélectionné |
-| R | Boucle sur le clip |
-| M | Poser un marqueur |
-| Maj + M | Supprimer le marqueur sous la tête de lecture |
-| Suppr | Supprimer le clip ou le marqueur sélectionné (clic droit sur un marqueur marche aussi) |
-| E / Maj + E | Exporter le clip sélectionné / tous les clips cochés |
-| Ctrl + Z | Annuler |
-| + / − / 0 | Zoom timeline / tout afficher (ou Ctrl + molette) |
-| Échap | Désélectionner, puis retour à la bibliothèque |
-
-## Export
-
-- **Précise · NVENC** : coupe à l'image près, réencodée sur la carte graphique (H.264). Si NVENC n'est pas dispo, l'app bascule seule sur le processeur.
-- **Instantanée** : aucun réencodage, qualité d'origine, quasi instantané. La coupe se cale sur l'image clé la plus proche, donc le début peut bouger d'une ou deux secondes.
-- **Audio** : garder toutes les pistes séparées, seulement la piste 1, ou tout mixer en une seule piste (pratique pour Discord).
-
-## Structure
+FFmpeg and FFprobe come from npm, nothing else to install.
 
 ```
-src/main       processus Electron : fichiers, FFmpeg, file d'export
-src/preload    pont sécurisé entre l'interface et le système
-src/renderer   interface React (bibliothèque, éditeur, timeline)
-src/shared     types partagés
+src/main       Electron main process: files, FFmpeg, OBS, HenrikDev, exports, tray, updates
+src/preload    the bridge between the UI and the system
+src/renderer   React UI: library, editor, timeline, stats, montage
+src/shared     types, translations, changelog
 ```
 
-Les données de l'app (réglages, clips, cache des vignettes) sont dans `%APPDATA%\Frag`.
+### Releasing
+
+1. Bump `version` in `package.json` and add an entry to `src/shared/changelog.ts`.
+2. Commit, tag (`git tag vX.Y.Z`) and push the tag.
+3. `npm run dist`, then create a GitHub release on that tag with the three files from `release/`: `Frag-Setup-X.Y.Z.exe`, its `.blockmap` and `latest.yml`. Installed copies pick it up on their own.
+
+## Privacy
+
+Your clips, notes and settings stay in `%APPDATA%\Frag`. The only network calls are to HenrikDev (match data, with your key), valorant-api.com (agent and map images, cached) and GitHub (update checks). Your HenrikDev key and OBS password are encrypted with Windows' own storage.
+
+## Credits
+
+Match data from the [HenrikDev Valorant API](https://github.com/Henrik-3/unofficial-valorant-api). Game assets from [valorant-api.com](https://valorant-api.com). Video work by [FFmpeg](https://ffmpeg.org).
+
+<sub>Frag isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</sub>

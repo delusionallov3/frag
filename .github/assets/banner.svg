@@ -1,0 +1,280 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-label="Frag — clip your Valorant games">
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ededed" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="fade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#0f0f10" stop-opacity="1"/>
+      <stop offset="0.45" stop-color="#0f0f10" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#0f0f10" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff4655" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ff4655" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="frame"><rect width="1280" height="400" rx="20"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="400" fill="#0f0f10"/>
+    <rect width="1280" height="400" fill="url(#grid)"/>
+
+    <!-- timeline, bottom right -->
+    <g transform="translate(560 124)">
+      <!-- ruler -->
+      <g stroke="#ededed" stroke-opacity="0.18">
+        <path d="M0 0h760"/>
+        <path d="M0 0v8M80 0v5M160 0v8M240 0v5M320 0v8M400 0v5M480 0v8M560 0v5M640 0v8M720 0v5"/>
+      </g>
+      <!-- thumbnail strip -->
+      <g transform="translate(0 20)">
+        <rect width="760" height="58" rx="6" fill="#18181a"/>
+        <g fill="#232326">
+          <rect x="4" y="4" width="92" height="50" rx="3"/>
+          <rect x="100" y="4" width="92" height="50" rx="3"/>
+          <rect x="196" y="4" width="92" height="50" rx="3"/>
+          <rect x="292" y="4" width="92" height="50" rx="3"/>
+          <rect x="388" y="4" width="92" height="50" rx="3"/>
+          <rect x="484" y="4" width="92" height="50" rx="3"/>
+          <rect x="580" y="4" width="92" height="50" rx="3"/>
+          <rect x="676" y="4" width="80" height="50" rx="3"/>
+        </g>
+        <!-- clips -->
+        <rect x="70" y="2" width="120" height="54" rx="5" fill="#ededed" fill-opacity="0.1" stroke="#ededed" stroke-opacity="0.45" stroke-width="2"/>
+        <rect x="318" y="2" width="168" height="54" rx="5" fill="#ff4655" fill-opacity="0.16" stroke="#ff4655" stroke-width="2"/>
+        <rect x="318" y="2" width="168" height="16" rx="5" fill="#ff4655" fill-opacity="0.9"/>
+        <text x="326" y="14" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" fill="#0f0f10">R7 · 3K · VANDAL</text>
+        <rect x="590" y="2" width="96" height="54" rx="5" fill="#ededed" fill-opacity="0.1" stroke="#ededed" stroke-opacity="0.45" stroke-width="2"/>
+      </g>
+      <!-- waveform -->
+      <g transform="translate(0 86)" fill="#4b4b51">
+        <rect x="0" y="13.0" width="2" height="5.9" rx="1"/>
+        <rect x="4" y="11.8" width="2" height="8.4" rx="1"/>
+        <rect x="8" y="8.6" width="2" height="14.7" rx="1"/>
+        <rect x="12" y="8.8" width="2" height="14.4" rx="1"/>
+        <rect x="16" y="6.1" width="2" height="19.9" rx="1"/>
+        <rect x="20" y="5.5" width="2" height="21.1" rx="1"/>
+        <rect x="24" y="5.5" width="2" height="20.9" rx="1"/>
+        <rect x="28" y="3.6" width="2" height="24.7" rx="1"/>
+        <rect x="32" y="4.8" width="2" height="22.4" rx="1"/>
+        <rect x="36" y="3.7" width="2" height="24.6" rx="1"/>
+        <rect x="40" y="5.2" width="2" height="21.7" rx="1"/>
+        <rect x="44" y="5.8" width="2" height="20.5" rx="1"/>
+        <rect x="48" y="5.7" width="2" height="20.7" rx="1"/>
+        <rect x="52" y="5.6" width="2" height="20.9" rx="1"/>
+        <rect x="56" y="8.9" width="2" height="14.2" rx="1"/>
+        <rect x="60" y="9.9" width="2" height="12.2" rx="1"/>
+        <rect x="64" y="10.0" width="2" height="11.9" rx="1"/>
+        <rect x="68" y="10.4" width="2" height="11.3" rx="1"/>
+        <rect x="72" y="11.9" width="2" height="8.2" rx="1"/>
+        <rect x="76" y="11.4" width="2" height="9.1" rx="1"/>
+        <rect x="80" y="8.9" width="2" height="14.2" rx="1"/>
+        <rect x="84" y="11.2" width="2" height="9.7" rx="1"/>
+        <rect x="88" y="8.5" width="2" height="15.1" rx="1"/>
+        <rect x="92" y="10.2" width="2" height="11.6" rx="1"/>
+        <rect x="96" y="10.9" width="2" height="10.2" rx="1"/>
+        <rect x="100" y="11.6" width="2" height="8.9" rx="1"/>
+        <rect x="104" y="11.8" width="2" height="8.4" rx="1"/>
+        <rect x="108" y="11.3" width="2" height="9.4" rx="1"/>
+        <rect x="112" y="12.5" width="2" height="7.0" rx="1"/>
+        <rect x="116" y="10.0" width="2" height="12.0" rx="1"/>
+        <rect x="120" y="8.5" width="2" height="15.0" rx="1"/>
+        <rect x="124" y="8.0" width="2" height="16.0" rx="1"/>
+        <rect x="128" y="6.3" width="2" height="19.5" rx="1"/>
+        <rect x="132" y="6.6" width="2" height="18.7" rx="1"/>
+        <rect x="136" y="5.8" width="2" height="20.5" rx="1"/>
+        <rect x="140" y="4.7" width="2" height="22.6" rx="1"/>
+        <rect x="144" y="2.9" width="2" height="26.1" rx="1"/>
+        <rect x="148" y="3.6" width="2" height="24.7" rx="1"/>
+        <rect x="152" y="4.3" width="2" height="23.5" rx="1"/>
+        <rect x="156" y="4.0" width="2" height="23.9" rx="1"/>
+        <rect x="160" y="5.3" width="2" height="21.4" rx="1"/>
+        <rect x="164" y="6.9" width="2" height="18.1" rx="1"/>
+        <rect x="168" y="6.8" width="2" height="18.3" rx="1"/>
+        <rect x="172" y="8.7" width="2" height="14.6" rx="1"/>
+        <rect x="176" y="11.7" width="2" height="8.5" rx="1"/>
+        <rect x="180" y="12.1" width="2" height="7.9" rx="1"/>
+        <rect x="184" y="10.5" width="2" height="11.0" rx="1"/>
+        <rect x="188" y="7.8" width="2" height="16.5" rx="1"/>
+        <rect x="192" y="6.7" width="2" height="18.6" rx="1"/>
+        <rect x="196" y="6.7" width="2" height="18.7" rx="1"/>
+        <rect x="200" y="3.5" width="2" height="25.0" rx="1"/>
+        <rect x="204" y="5.3" width="2" height="21.5" rx="1"/>
+        <rect x="208" y="3.9" width="2" height="24.3" rx="1"/>
+        <rect x="212" y="2.6" width="2" height="26.7" rx="1"/>
+        <rect x="216" y="4.6" width="2" height="22.9" rx="1"/>
+        <rect x="220" y="4.0" width="2" height="24.0" rx="1"/>
+        <rect x="224" y="6.0" width="2" height="20.0" rx="1"/>
+        <rect x="228" y="5.1" width="2" height="21.9" rx="1"/>
+        <rect x="232" y="5.9" width="2" height="20.2" rx="1"/>
+        <rect x="236" y="7.7" width="2" height="16.6" rx="1"/>
+        <rect x="240" y="8.1" width="2" height="15.8" rx="1"/>
+        <rect x="244" y="11.1" width="2" height="9.7" rx="1"/>
+        <rect x="248" y="11.3" width="2" height="9.5" rx="1"/>
+        <rect x="252" y="11.7" width="2" height="8.6" rx="1"/>
+        <rect x="256" y="10.8" width="2" height="10.4" rx="1"/>
+        <rect x="260" y="10.4" width="2" height="11.2" rx="1"/>
+        <rect x="264" y="8.7" width="2" height="14.5" rx="1"/>
+        <rect x="268" y="8.2" width="2" height="15.6" rx="1"/>
+        <rect x="272" y="9.6" width="2" height="12.7" rx="1"/>
+        <rect x="276" y="9.4" width="2" height="13.2" rx="1"/>
+        <rect x="280" y="11.8" width="2" height="8.3" rx="1"/>
+        <rect x="284" y="10.8" width="2" height="10.5" rx="1"/>
+        <rect x="288" y="12.0" width="2" height="8.1" rx="1"/>
+        <rect x="292" y="9.9" width="2" height="12.2" rx="1"/>
+        <rect x="296" y="9.1" width="2" height="13.7" rx="1"/>
+        <rect x="300" y="9.4" width="2" height="13.2" rx="1"/>
+        <rect x="304" y="7.8" width="2" height="16.4" rx="1"/>
+        <rect x="308" y="5.8" width="2" height="20.5" rx="1"/>
+        <rect x="312" y="6.6" width="2" height="18.7" rx="1"/>
+        <rect x="316" y="4.5" width="2" height="23.1" rx="1"/>
+        <rect x="320" y="4.8" width="2" height="22.5" rx="1"/>
+        <rect x="324" y="4.6" width="2" height="22.8" rx="1"/>
+        <rect x="328" y="4.8" width="2" height="22.5" rx="1"/>
+        <rect x="332" y="3.0" width="2" height="26.1" rx="1"/>
+        <rect x="336" y="5.5" width="2" height="21.0" rx="1"/>
+        <rect x="340" y="6.1" width="2" height="19.9" rx="1"/>
+        <rect x="344" y="6.8" width="2" height="18.4" rx="1"/>
+        <rect x="348" y="6.8" width="2" height="18.4" rx="1"/>
+        <rect x="352" y="10.7" width="2" height="10.5" rx="1"/>
+        <rect x="356" y="11.3" width="2" height="9.3" rx="1"/>
+        <rect x="360" y="11.9" width="2" height="8.1" rx="1"/>
+        <rect x="364" y="9.2" width="2" height="13.6" rx="1"/>
+        <rect x="368" y="7.7" width="2" height="16.5" rx="1"/>
+        <rect x="372" y="6.1" width="2" height="19.8" rx="1"/>
+        <rect x="376" y="6.6" width="2" height="18.9" rx="1"/>
+        <rect x="380" y="5.1" width="2" height="21.8" rx="1"/>
+        <rect x="384" y="4.5" width="2" height="23.1" rx="1"/>
+        <rect x="388" y="2.4" width="2" height="27.2" rx="1"/>
+        <rect x="392" y="2.0" width="2" height="27.9" rx="1"/>
+        <rect x="396" y="4.6" width="2" height="22.8" rx="1"/>
+        <rect x="400" y="5.0" width="2" height="22.0" rx="1"/>
+        <rect x="404" y="5.5" width="2" height="20.9" rx="1"/>
+        <rect x="408" y="6.5" width="2" height="19.0" rx="1"/>
+        <rect x="412" y="6.9" width="2" height="18.3" rx="1"/>
+        <rect x="416" y="7.8" width="2" height="16.4" rx="1"/>
+        <rect x="420" y="10.1" width="2" height="11.8" rx="1"/>
+        <rect x="424" y="12.2" width="2" height="7.6" rx="1"/>
+        <rect x="428" y="12.2" width="2" height="7.5" rx="1"/>
+        <rect x="432" y="12.3" width="2" height="7.5" rx="1"/>
+        <rect x="436" y="10.7" width="2" height="10.6" rx="1"/>
+        <rect x="440" y="8.8" width="2" height="14.3" rx="1"/>
+        <rect x="444" y="9.1" width="2" height="13.7" rx="1"/>
+        <rect x="448" y="9.5" width="2" height="13.1" rx="1"/>
+        <rect x="452" y="9.2" width="2" height="13.5" rx="1"/>
+        <rect x="456" y="9.4" width="2" height="13.1" rx="1"/>
+        <rect x="460" y="11.9" width="2" height="8.1" rx="1"/>
+        <rect x="464" y="10.3" width="2" height="11.5" rx="1"/>
+        <rect x="468" y="11.6" width="2" height="8.8" rx="1"/>
+        <rect x="472" y="10.1" width="2" height="11.8" rx="1"/>
+        <rect x="476" y="9.0" width="2" height="13.9" rx="1"/>
+        <rect x="480" y="8.9" width="2" height="14.1" rx="1"/>
+        <rect x="484" y="7.6" width="2" height="16.8" rx="1"/>
+        <rect x="488" y="7.3" width="2" height="17.4" rx="1"/>
+        <rect x="492" y="4.7" width="2" height="22.6" rx="1"/>
+        <rect x="496" y="5.6" width="2" height="20.8" rx="1"/>
+        <rect x="500" y="5.0" width="2" height="22.0" rx="1"/>
+        <rect x="504" y="4.3" width="2" height="23.4" rx="1"/>
+        <rect x="508" y="4.5" width="2" height="23.0" rx="1"/>
+        <rect x="512" y="4.3" width="2" height="23.4" rx="1"/>
+        <rect x="516" y="5.8" width="2" height="20.4" rx="1"/>
+        <rect x="520" y="6.9" width="2" height="18.1" rx="1"/>
+        <rect x="524" y="7.7" width="2" height="16.6" rx="1"/>
+        <rect x="528" y="9.3" width="2" height="13.4" rx="1"/>
+        <rect x="532" y="10.1" width="2" height="11.8" rx="1"/>
+        <rect x="536" y="12.8" width="2" height="6.4" rx="1"/>
+        <rect x="540" y="10.7" width="2" height="10.5" rx="1"/>
+        <rect x="544" y="9.8" width="2" height="12.4" rx="1"/>
+        <rect x="548" y="9.6" width="2" height="12.9" rx="1"/>
+        <rect x="552" y="7.8" width="2" height="16.5" rx="1"/>
+        <rect x="556" y="6.2" width="2" height="19.6" rx="1"/>
+        <rect x="560" y="5.1" width="2" height="21.8" rx="1"/>
+        <rect x="564" y="5.1" width="2" height="21.8" rx="1"/>
+        <rect x="568" y="2.5" width="2" height="27.0" rx="1"/>
+        <rect x="572" y="1.9" width="2" height="28.1" rx="1"/>
+        <rect x="576" y="3.7" width="2" height="24.6" rx="1"/>
+        <rect x="580" y="4.1" width="2" height="23.7" rx="1"/>
+        <rect x="584" y="6.1" width="2" height="19.8" rx="1"/>
+        <rect x="588" y="7.0" width="2" height="18.0" rx="1"/>
+        <rect x="592" y="7.4" width="2" height="17.1" rx="1"/>
+        <rect x="596" y="8.9" width="2" height="14.1" rx="1"/>
+        <rect x="600" y="8.6" width="2" height="14.8" rx="1"/>
+        <rect x="604" y="11.9" width="2" height="8.2" rx="1"/>
+        <rect x="608" y="13.6" width="2" height="4.9" rx="1"/>
+        <rect x="612" y="10.4" width="2" height="11.2" rx="1"/>
+        <rect x="616" y="10.7" width="2" height="10.5" rx="1"/>
+        <rect x="620" y="11.2" width="2" height="9.7" rx="1"/>
+        <rect x="624" y="9.5" width="2" height="12.9" rx="1"/>
+        <rect x="628" y="10.9" width="2" height="10.2" rx="1"/>
+        <rect x="632" y="9.5" width="2" height="12.9" rx="1"/>
+        <rect x="636" y="8.6" width="2" height="14.8" rx="1"/>
+        <rect x="640" y="9.6" width="2" height="12.8" rx="1"/>
+        <rect x="644" y="11.0" width="2" height="10.0" rx="1"/>
+        <rect x="648" y="13.0" width="2" height="5.9" rx="1"/>
+        <rect x="652" y="11.5" width="2" height="9.0" rx="1"/>
+        <rect x="656" y="10.8" width="2" height="10.4" rx="1"/>
+        <rect x="660" y="7.6" width="2" height="16.7" rx="1"/>
+        <rect x="664" y="7.1" width="2" height="17.9" rx="1"/>
+        <rect x="668" y="5.2" width="2" height="21.7" rx="1"/>
+        <rect x="672" y="5.5" width="2" height="21.0" rx="1"/>
+        <rect x="676" y="5.0" width="2" height="22.0" rx="1"/>
+        <rect x="680" y="2.7" width="2" height="26.5" rx="1"/>
+        <rect x="684" y="2.0" width="2" height="28.1" rx="1"/>
+        <rect x="688" y="2.4" width="2" height="27.1" rx="1"/>
+        <rect x="692" y="3.0" width="2" height="26.1" rx="1"/>
+        <rect x="696" y="3.6" width="2" height="24.8" rx="1"/>
+        <rect x="700" y="4.8" width="2" height="22.3" rx="1"/>
+        <rect x="704" y="7.6" width="2" height="16.7" rx="1"/>
+        <rect x="708" y="8.2" width="2" height="15.6" rx="1"/>
+        <rect x="712" y="10.3" width="2" height="11.4" rx="1"/>
+        <rect x="716" y="13.0" width="2" height="6.0" rx="1"/>
+        <rect x="720" y="13.1" width="2" height="5.8" rx="1"/>
+        <rect x="724" y="10.6" width="2" height="10.8" rx="1"/>
+        <rect x="728" y="9.0" width="2" height="13.9" rx="1"/>
+        <rect x="732" y="6.3" width="2" height="19.4" rx="1"/>
+        <rect x="736" y="4.2" width="2" height="23.5" rx="1"/>
+        <rect x="740" y="4.8" width="2" height="22.5" rx="1"/>
+        <rect x="744" y="2.6" width="2" height="26.8" rx="1"/>
+        <rect x="748" y="2.0" width="2" height="27.9" rx="1"/>
+        <rect x="752" y="2.1" width="2" height="27.9" rx="1"/>
+        <rect x="756" y="4.1" width="2" height="23.9" rx="1"/>
+      </g>
+      <!-- match track: kills -->
+      <g transform="translate(0 128)">
+        <rect width="760" height="22" rx="4" fill="#18181a"/>
+        <g fill="#ff4655">
+          <path d="M96 11l6-6 6 6-6 6z"/>
+          <path d="M150 11l6-6 6 6-6 6z"/>
+          <path d="M344 11l6-6 6 6-6 6z"/>
+          <path d="M392 11l6-6 6 6-6 6z"/>
+          <path d="M452 11l6-6 6 6-6 6z"/>
+          <path d="M624 11l6-6 6 6-6 6z"/>
+        </g>
+        <g fill="#ededed" fill-opacity="0.5">
+          <path d="M236 11l6-6 6 6-6 6z"/>
+          <path d="M540 11l6-6 6 6-6 6z"/>
+        </g>
+        <path d="M700 6h10v10h-10z" fill="#e8c060"/>
+      </g>
+      <!-- playhead -->
+      <g transform="translate(466 -10)">
+        <path d="M-7 0h14v8l-7 7-7-7z" fill="#ff4655"/>
+        <path d="M0 14v162" stroke="#ff4655" stroke-width="2"/>
+      </g>
+    </g>
+    <rect x="460" width="520" height="400" fill="url(#fade)"/>
+
+    <!-- brand -->
+    <g transform="translate(88 104)">
+      <g transform="scale(4.2)">
+        <path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/>
+        <path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/>
+      </g>
+      <text x="116" y="82" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="96" font-weight="800" font-style="italic" letter-spacing="2" fill="#ededed">FRAG</text>
+      <text x="4" y="150" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="26" font-weight="500" fill="#a1a1a6">Clip your Valorant games. Fast.</text>
+      <g transform="translate(4 182)" font-family="Consolas, Menlo, monospace" font-size="15" fill="#85858b">
+        <text>record · link · clip · review · montage</text>
+      </g>
+    </g>
+  </g>
+</svg>
