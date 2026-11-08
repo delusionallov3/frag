@@ -804,18 +804,24 @@ select.input optgroup {
 .mrow:hover.is-linked::before {
   background: linear-gradient(90deg, var(--raised) 0%, rgba(31, 31, 33, 0.92) 38%, rgba(31, 31, 33, 0.5) 100%);
 }
+/* The result edge is an inset shadow on a layer with the row's own rounded corners, so it always follows
+   them (a separate 3px bar escaped the corner clip after a hover, once the row had been composited) */
 .mrow-edge {
+  display: none;
+}
+.mrow.is-win::after,
+.mrow.is-loss::after {
+  content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
 }
-.mrow.is-win .mrow-edge {
-  background: var(--ok);
+.mrow.is-win::after {
+  box-shadow: inset 3px 0 0 var(--ok);
 }
-.mrow.is-loss .mrow-edge {
-  background: var(--err);
+.mrow.is-loss::after {
+  box-shadow: inset 3px 0 0 var(--err);
 }
 
 .mrow-thumb {
