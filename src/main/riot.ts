@@ -88,20 +88,34 @@ function pick(priv: Record<string, unknown>, key: string): unknown {
   return undefined
 }
 
+/** The signed-in account, cached per client run. Signing in to another account keeps the same client
+ * (same port), so the cache is checked again whenever that account has no Valorant presence. */
 let myPuuid: { port: number; puuid: string } | null = null
+
+async function sessionPuuid(lock: Lock): Promise<string | null> {
+  const session = await localGet<{ puuid?: string; loaded?: boolean }>(lock, '/chat/v1/session')
+  if (!session.puuid || session.loaded === false) return null
+  myPuuid = { port: lock.port, puuid: session.puuid }
+  return session.puuid
+}
 
 export async function gameInfo(): Promise<GameInfo> {
   const closed: GameInfo = { state: 'closed', map: null, queue: null, score: null, scoreType: null }
   const lock = await readLock()
   if (!lock) return closed
   try {
-    if (!myPuuid || myPuuid.port !== lock.port) {
-      const session = await localGet<{ puuid?: string }>(lock, '/chat/v1/session')
-      if (!session.puuid) return closed
-      myPuuid = { port: lock.port, puuid: session.puuid }
-    }
+    let puuid = myPuuid && myPuuid.port === lock.port ? myPuuid.puuid : await sessionPuuid(lock)
+    if (!puuid) return closed
     const { presences } = await localGet<{ presences: Presence[] }>(lock, '/chat/v4/presences')
-    const me = presences.find((p) => p.puuid === myPuuid!.puuid && p.product === 'valorant')
+    let me = presences.find((p) => p.puuid === puuid && p.product === 'valorant')
+    if (!me) {
+      // maybe another account now: ask the client who is signed in
+      const fresh = await sessionPuuid(lock)
+      if (fresh && fresh !== puuid) {
+        puuid = fresh
+        me = presences.find((p) => p.puuid === puuid && p.product === 'valorant')
+      }
+    }
     if (!me) return closed
     if (!me.private) return { ...closed, state: 'menus' }
     const priv = JSON.parse(Buffer.from(me.private, 'base64').toString('utf8')) as Record<string, unknown>

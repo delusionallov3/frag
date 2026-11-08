@@ -13,6 +13,17 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.2',
+    date: '2026-11-08',
+    title: ['Valorant detection fix', 'Correctif de la détection de Valorant'],
+    items: [
+      [
+        'Valorant is detected again after switching Riot accounts without restarting the Riot client.',
+        'Valorant est de nouveau détecté après un changement de compte Riot sans redémarrer le client Riot.'
+      ]
+    ]
+  },
+  {
     version: '0.4.1',
     date: '2026-11-08',
     title: ['Mark, slow down, share', 'Marquer, ralentir, partager'],
