@@ -164,6 +164,16 @@ async function pump(): Promise<void> {
     const plan = job.kind === 'montage' ? montages.get(job.id) : undefined
     if (job.kind === 'montage' && !plan) throw new Error(tr('Montage not found, start it again', 'Montage introuvable, relance-le'))
 
+    // Broadcast montage: draw the motion layer first (about a third of the job)
+    const share = plan?.prepare ? 0.35 : 0
+    if (plan?.prepare) {
+      await plan.prepare((p) => {
+        job.progress = p * share
+        emit()
+      })
+      if (canceled.has(job.id)) throw new Error('canceled')
+    }
+
     const attempt = async (enc: 'nvenc' | 'cpu'): Promise<void> => {
       job.encoder = job.options.mode === 'fast' ? 'copy' : enc
       const args = plan ? plan.build(enc) : buildCutArgs({
@@ -178,7 +188,7 @@ async function pump(): Promise<void> {
         encoder: enc
       })
       const cut = runCut(args, duration, (p) => {
-        job.progress = p
+        job.progress = share + p * (1 - share)
         emit()
       })
       current = { job, cut }

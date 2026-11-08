@@ -384,12 +384,58 @@ export interface MontageItem {
   end: number
   /** title card already drawn (empty = none) */
   layers: CardLayer[]
+  /** Broadcast style: what this highlight is (drawn as a lower third, kills drive the punch-ins) */
+  motion?: MotionHighlight | null
+}
+
+/** One highlight in a Broadcast montage */
+export interface MotionHighlight {
+  /** "3K", "ACE", "1K"… */
+  label: string
+  /** 1-based round number */
+  round: number
+  /** my team's score after the round, "5–2" */
+  score: string
+  /** "Clutch 1v2" or null */
+  clutch: string | null
+  weapon: string | null
+  /** valorant-api image URL (killfeed silhouette) */
+  weaponIcon: string | null
+  /** my kills, seconds from the clip start */
+  kills: number[]
+}
+
+/** The match intro of a Broadcast montage */
+export interface MotionIntro {
+  map: string
+  mode: string
+  /** epoch ms */
+  date: number
+  us: number
+  them: number
+  agent: string
+  /** "Diamond 2" */
+  tier: string | null
+  kda: string
+  acs: number | null
+  adr: number | null
+  /** headshot % */
+  hs: number | null
+  /** valorant-api image URLs */
+  splash: string | null
+  portrait: string | null
+  rankIcon: string | null
+  /** interface language for the few words on screen */
+  lang: 'en' | 'fr'
 }
 
 export interface MontageOptions {
-  /** crossfade length between two clips, 0 = hard cut */
+  /** crossfade length between two clips, 0 = hard cut (classic style) */
   transition: number
   name: string
+  /** classic: fades and title cards; broadcast: match intro, red wipes, lower thirds, punch-ins on kills */
+  style?: 'classic' | 'broadcast'
+  intro?: MotionIntro | null
 }
 
 export interface ExportJob {

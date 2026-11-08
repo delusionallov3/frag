@@ -5,6 +5,8 @@ import { locale, tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { baseName, fmtClipLen, stripExt } from '../lib/format'
 import { CARD_ACCENTS, CARD_STYLES, renderCard } from '../lib/cards'
+import { analyse } from '../lib/match'
+import { highlightFor, introFor } from '../lib/recap'
 import Modal from './Modal'
 import CardPreview from './CardPreview'
 
@@ -17,10 +19,13 @@ interface Pick {
   sub: string
 }
 
+/** -1 = Broadcast: match intro, red wipes naming the round, lower thirds, punch-ins on kills */
+const BROADCAST = -1
 const transitions = (): { value: number; label: string }[] => [
   { value: 0, label: tr('Hard cut', 'Coupe sèche') },
   { value: 0.3, label: tr('Short fade', 'Fondu court') },
-  { value: 0.8, label: tr('Long fade', 'Fondu long') }
+  { value: 0.8, label: tr('Long fade', 'Fondu long') },
+  { value: BROADCAST, label: 'Broadcast' }
 ]
 
 /** Title card preferences remembered between sessions (just a convenience) */
@@ -89,7 +94,7 @@ export default function MontageModal(): JSX.Element | null {
 
   const total = useMemo(() => {
     const sum = picks.reduce((n, p) => n + (p.clip.end - p.clip.start), 0)
-    return Math.max(0, sum - transition * Math.max(0, picks.length - 1))
+    return Math.max(0, sum - Math.max(0, transition) * Math.max(0, picks.length - 1))
   }, [picks, transition])
 
   if (!montageOpen) return null
@@ -119,6 +124,7 @@ export default function MontageModal(): JSX.Element | null {
     })
 
   const exportMontage = async (): Promise<void> => {
+    if (transition === BROADCAST) return exportBroadcast()
     setBusy(true)
     setError(null)
     let items: MontageItem[]
@@ -138,6 +144,39 @@ export default function MontageModal(): JSX.Element | null {
       return
     }
     const res = await window.frag.exportMontage(items, { transition, name: name.trim() })
+    setBusy(false)
+    if (!res.ok) {
+      setError(res.error)
+      return
+    }
+    setMontageOpen(false)
+    setPicks([])
+    showToast(tr('Montage added to exports', 'Montage ajouté à l’export'), { label: tr('View', 'Voir'), run: () => setExportsOpen(true) })
+  }
+
+  /** Broadcast: no title cards; each clip of a linked game gets its lower third; one game = the match intro too */
+  const exportBroadcast = async (): Promise<void> => {
+    setBusy(true)
+    setError(null)
+    const byPath = new Map((projects ?? []).map((p) => [p.videoPath, p]))
+    const rounds = new Map<string, ReturnType<typeof analyse>['rounds']>()
+    const items: MontageItem[] = picks.map((p) => {
+      const link = byPath.get(p.videoPath)?.match ?? null
+      let motion = null
+      if (link) {
+        if (!rounds.has(p.videoPath)) rounds.set(p.videoPath, analyse(link).rounds)
+        motion = highlightFor(link, rounds.get(p.videoPath)!, p.clip)
+      }
+      return { videoPath: p.videoPath, start: p.clip.start, end: p.clip.end, layers: [], motion }
+    })
+    const games = new Set(picks.map((p) => p.videoPath))
+    const only = games.size === 1 ? byPath.get(picks[0].videoPath)?.match : null
+    const res = await window.frag.exportMontage(items, {
+      transition: 0,
+      name: name.trim(),
+      style: 'broadcast',
+      intro: only ? introFor(only) : null
+    })
     setBusy(false)
     if (!res.ok) {
       setError(res.error)
@@ -250,7 +289,10 @@ export default function MontageModal(): JSX.Element | null {
             {tr('Title card', 'Carton titre')}
             <span className="mt-total">{shown ? `clip ${picks.indexOf(shown) + 1}` : tr('example', 'exemple')}</span>
           </div>
-          <div className="mt-style-body">
+          {transition === BROADCAST && (
+            <p className="mp-note">{tr('Broadcast draws its own titles: the match intro, the round on each wipe and a lower third per highlight.', 'Broadcast dessine ses propres titres : l’intro du match, le round sur chaque volet et un bandeau par temps fort.')}</p>
+          )}
+          <div className={`mt-style-body ${transition === BROADCAST ? 'is-off' : ''}`}>
             <CardPreview
               videoPath={shown?.videoPath ?? null}
               at={shown ? shown.clip.start : null}

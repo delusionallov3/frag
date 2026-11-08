@@ -21,5 +21,14 @@ export default defineConfig({
       },
     },
     plugins: [react()],
+    // two pages: the app, and the motion layer the montage export draws offscreen (src/main/motion.ts)
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/renderer/index.html'),
+          motion: resolve('src/renderer/motion.html'),
+        },
+      },
+    },
   },
 });

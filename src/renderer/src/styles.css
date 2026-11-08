@@ -4131,3 +4131,14 @@ select.input optgroup {
 .wn-all {
   align-self: flex-start;
 }
+
+/* Match recap button, under "Create N clips" */
+.mp-recap {
+  margin-top: 8px;
+}
+
+/* Montage: the title card settings do not apply to the Broadcast style */
+.mt-style-body.is-off {
+  opacity: 0.35;
+  pointer-events: none;
+}

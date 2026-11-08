@@ -4,6 +4,7 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import type { CardLayer, MontageItem, MontageOptions } from '@shared/types'
 import { probe, type CutArgs } from './ffmpeg'
+import { openMotionRenderer, type SceneJob } from './motion'
 
 const CQ = { high: 18, balanced: 23, light: 28 } as const
 
@@ -33,8 +34,17 @@ function layerMotion(l: CardLayer, X: number, Y: number, w: number, h: number, H
 
 export interface MontagePlan {
   duration: number
+  /** heavy work done when the job starts (the Broadcast motion layer), progress 0..1 */
+  prepare?: (onProgress: (p: number) => void) => Promise<void>
   build: (encoder: 'nvenc' | 'cpu') => string[]
   cleanup: () => Promise<void>
+}
+
+const encoderArgs = (encoder: 'nvenc' | 'cpu', quality: CutArgs['quality']): string[] => {
+  const cq = CQ[quality]
+  return encoder === 'nvenc'
+    ? ['-c:v', 'h264_nvenc', '-preset', 'p5', '-tune', 'hq', '-rc', 'vbr', '-cq', String(cq), '-b:v', '0']
+    : ['-c:v', 'libx264', '-preset', 'faster', '-crf', String(cq)]
 }
 
 export async function planMontage(
@@ -45,6 +55,7 @@ export async function planMontage(
   output: string
 ): Promise<MontagePlan> {
   if (items.length < 1) throw new Error(tr('No clips in the montage', 'Aucun clip dans le montage'))
+  if (opts.style === 'broadcast') return planBroadcast(items, opts, quality, audio, output)
   const metas = await Promise.all(items.map((it) => probe(it.videoPath)))
   const W = metas[0].width - (metas[0].width % 2) || 1920
   const H = metas[0].height - (metas[0].height % 2) || 1080
@@ -153,4 +164,155 @@ export async function planMontage(
   }
 
   return { duration: total, build, cleanup: () => fs.rm(tmp, { recursive: true, force: true }) }
+}
+
+/* ------------------------------------------------------------------ Broadcast style */
+
+/** Broadcast timings (s) */
+const INTRO = 4.6
+const WIPE = 0.9
+/** where the wipe fully covers the frame: the cut sits here */
+const WIPE_CUT = 0.45
+/** punch-in on each kill: zoom added at the kill, then it settles */
+const PUNCH = 0.055
+
+/** Audio of one clip, normalised to 48 kHz stereo, with short fades so hard cuts don't click */
+function clipAudio(src: number, tracks: number, audio: CutArgs['audio'], d: number, label: string): string {
+  const fades = `afade=t=in:d=0.04,afade=t=out:st=${Math.max(0, d - 0.06).toFixed(3)}:d=0.06`
+  if (!tracks) return `anullsrc=r=48000:cl=stereo:d=${d.toFixed(3)}[${label}]`
+  if (audio === 'mix' && tracks > 1) {
+    const ins = Array.from({ length: tracks }, (_, k) => `[${src}:a:${k}]`).join('')
+    return `${ins}amix=inputs=${tracks}:normalize=0,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS,${fades}[${label}]`
+  }
+  return `[${src}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS,${fades}[${label}]`
+}
+
+/**
+ * Match intro, then the highlights with hard cuts hidden under a red wipe that names the next round,
+ * a lower third whose count pops on each kill, and a punch-in on every kill.
+ * The motion layer is drawn when the job starts (prepare), the ffmpeg graph composes it.
+ */
+async function planBroadcast(
+  items: MontageItem[],
+  opts: MontageOptions,
+  quality: CutArgs['quality'],
+  audio: CutArgs['audio'],
+  output: string
+): Promise<MontagePlan> {
+  const metas = await Promise.all(items.map((it) => probe(it.videoPath)))
+  const W = metas[0].width - (metas[0].width % 2) || 1920
+  const H = metas[0].height - (metas[0].height % 2) || 1080
+  const FPS = Math.min(240, Math.round(metas[0].fps) || 60)
+  const lang = opts.intro?.lang ?? (tr('en', 'fr') as 'en' | 'fr')
+  const durs = items.map((it) => Math.max(0.6, it.end - it.start))
+  const hasIntro = !!opts.intro
+  const segDurs = [...(hasIntro ? [INTRO] : []), ...durs]
+  const total = segDurs.reduce((a, b) => a + b, 0)
+
+  const tmp = join(tmpdir(), `frag-montage-${Date.now()}`)
+  await fs.mkdir(tmp, { recursive: true })
+
+  // what the motion layer has to draw
+  const scenes: SceneJob[] = []
+  if (opts.intro) scenes.push({ scene: 'intro', intro: opts.intro, duration: INTRO, out: join(tmp, 'intro.mov'), lang })
+  const lowers: { i: number; file: string; dur: number }[] = []
+  items.forEach((it, i) => {
+    const m = it.motion
+    if (!m || durs[i] < 1.6) return
+    const last = m.kills.length ? Math.max(...m.kills) : 0
+    const dur = Math.min(durs[i], Math.max(3.2, last + 2.4))
+    const file = join(tmp, `lower${i}.mov`)
+    lowers.push({ i, file, dur })
+    scenes.push({ scene: 'lower', highlight: m, duration: dur, out: file, lang })
+  })
+  // one wipe per cut: between the intro and the first clip, then between the clips
+  const wipes: { at: number; file: string }[] = []
+  let acc = 0
+  for (let j = 0; j < segDurs.length - 1; j++) {
+    acc += segDurs[j]
+    const next = items[hasIntro ? j : j + 1]
+    const file = join(tmp, `wipe${j}.mov`)
+    wipes.push({ at: acc, file })
+    scenes.push({ scene: 'wipe', highlight: next?.motion ?? undefined, duration: WIPE, out: file, lang })
+  }
+
+  const prepare = async (onProgress: (p: number) => void): Promise<void> => {
+    const frames = scenes.reduce((a, s) => a + Math.round(s.duration * 30), 0) || 1
+    let done = 0
+    const r = await openMotionRenderer(W, H)
+    try {
+      for (const sc of scenes) {
+        const before = done
+        await r.render(sc, (n) => {
+          done = before + n
+          onProgress(done / frames)
+        })
+      }
+    } finally {
+      r.close()
+    }
+  }
+
+  const build = (encoder: 'nvenc' | 'cpu'): string[] => {
+    const inputs: string[] = []
+    const parts: string[] = []
+    const nextInput = (): number => inputs.filter((x) => x === '-i').length
+    const norm = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${FPS}`
+    const segs: string[] = []
+
+    if (hasIntro) {
+      const k = nextInput()
+      inputs.push('-i', join(tmp, 'intro.mov'))
+      parts.push(`[${k}:v]settb=AVTB,setpts=PTS-STARTPTS,${norm},format=yuv420p,trim=duration=${INTRO}[sv_intro]`)
+      parts.push(`anullsrc=r=48000:cl=stereo:d=${INTRO}[sa_intro]`)
+      segs.push('[sv_intro][sa_intro]')
+    }
+
+    items.forEach((it, i) => {
+      const d = durs[i]
+      const src = nextInput()
+      inputs.push('-ss', it.start.toFixed(3), '-t', d.toFixed(3), '-i', it.videoPath)
+      const kills = (it.motion?.kills ?? []).filter((k) => k >= 0 && k < d)
+      const z = kills.map((k) => `${PUNCH}*exp(-(it-${k.toFixed(3)})*7)*gte(it\\,${k.toFixed(3)})`).join('+')
+      const punch = z ? `,zoompan=z='1+${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS}` : ''
+      parts.push(`[${src}:v:0]settb=AVTB,setpts=PTS-STARTPTS,${norm}${punch},format=yuv420p[c${i}]`)
+      let v = `c${i}`
+      const lo = lowers.find((l) => l.i === i)
+      if (lo) {
+        const k = nextInput()
+        inputs.push('-i', lo.file)
+        parts.push(`[${k}:v]setpts=PTS-STARTPTS,format=argb[lo${i}]`)
+        parts.push(`[${v}][lo${i}]overlay=0:0:eof_action=pass:repeatlast=0:format=auto,format=yuv420p[cl${i}]`)
+        v = `cl${i}`
+      }
+      parts.push(clipAudio(src, metas[i].audioTracks, audio, d, `sa${i}`))
+      segs.push(`[${v}][sa${i}]`)
+    })
+
+    parts.push(`${segs.join('')}concat=n=${segs.length}:v=1:a=1[vcat][aout]`)
+    let v = 'vcat'
+    wipes.forEach((w, j) => {
+      const k = nextInput()
+      inputs.push('-i', w.file)
+      const start = Math.max(0, w.at - WIPE_CUT)
+      parts.push(`[${k}:v]setpts=PTS-STARTPTS+${start.toFixed(3)}/TB,format=argb[wp${j}]`)
+      parts.push(`[${v}][wp${j}]overlay=0:0:eof_action=pass:repeatlast=0:format=auto[vw${j}]`)
+      v = `vw${j}`
+    })
+    parts.push(`[${v}]format=yuv420p[vout]`)
+
+    return [
+      '-hide_banner', '-v', 'error', '-y', '-nostats', '-progress', 'pipe:1',
+      ...inputs,
+      '-filter_complex', parts.join(';'),
+      '-map', '[vout]', '-map', '[aout]',
+      ...encoderArgs(encoder, quality),
+      '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k',
+      '-movflags', '+faststart',
+      output
+    ]
+  }
+
+  return { duration: total, prepare, build, cleanup: () => fs.rm(tmp, { recursive: true, force: true }) }
 }
