@@ -29,7 +29,7 @@ import MatchPanel, { type AutoSyncState } from './MatchPanel'
 import ReviewPanel from './ReviewPanel'
 import { insights, type ReviewKind } from '../lib/review'
 import { analyse, autoClips, offsetAt, type AutoClipOptions, type TLEvent } from '../lib/match'
-import { introFor, recapItems } from '../lib/recap'
+import RecapModal from './RecapModal'
 
 const DEFAULT_LEN = 10
 const MIN_LEN = 0.2
@@ -614,37 +614,13 @@ export default function Editor({ path }: { path: string }): JSX.Element {
     [analysis, pushHistory, showToast]
   )
 
-  /** Match recap: the intro card, then every highlight, Broadcast style, straight into the exports */
-  const [recapBusy, setRecapBusy] = useState(false)
-  const makeRecap = useCallback(
-    async (opts: AutoClipOptions): Promise<void> => {
-      const l = st.current.link
-      if (!l || !analysis) return
-      const items = recapItems(l, analysis.rounds, path, st.current.duration, opts)
-      if (!items.length) {
-        showToast(tr('No highlights at this setting', 'Aucun temps fort avec ce réglage'))
-        return
-      }
-      setRecapBusy(true)
-      const intro = introFor(l)
-      const res = await window.frag.exportMontage(items, {
-        transition: 0,
-        name: `${intro.map} ${intro.us}-${intro.them} · ${tr('recap', 'résumé')}`,
-        style: 'broadcast',
-        intro
-      })
-      setRecapBusy(false)
-      if (!res.ok) {
-        showToast(res.error)
-        return
-      }
-      showToast(
-        items.length === 1 ? tr('Recap queued: intro + 1 highlight', 'Résumé en file : intro + 1 temps fort') : tr(`Recap queued: intro + ${items.length} highlights`, `Résumé en file : intro + ${items.length} temps forts`),
-        { label: tr('View', 'Voir'), run: () => setExportsOpen(true) }
-      )
-    },
-    [analysis, path, showToast, setExportsOpen]
-  )
+  /** Match recap window (style, options, live preview, export) */
+  const [recapOpen, setRecapOpen] = useState(false)
+  const [recapOpts, setRecapOpts] = useState<AutoClipOptions | null>(null)
+  const makeRecap = useCallback((opts: AutoClipOptions): void => {
+    setRecapOpts(opts)
+    setRecapOpen(true)
+  }, [])
 
   const previewAutoClips = useCallback(
     (opts: AutoClipOptions): number =>
@@ -1092,7 +1068,6 @@ export default function Editor({ path }: { path: string }): JSX.Element {
             onAutoClips={makeAutoClips}
             previewAutoClips={previewAutoClips}
             onRecap={makeRecap}
-            recapBusy={recapBusy}
           />
         )}
       </aside>
@@ -1167,6 +1142,17 @@ export default function Editor({ path }: { path: string }): JSX.Element {
           </div>
         )}
       </section>
+      {recapOpen && link && analysis && recapOpts && (
+        <RecapModal
+          open
+          onClose={() => setRecapOpen(false)}
+          link={link}
+          rounds={analysis.rounds}
+          videoPath={path}
+          duration={duration}
+          defaults={recapOpts}
+        />
+      )}
     </div>
   )
 }

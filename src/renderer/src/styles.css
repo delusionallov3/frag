@@ -4142,3 +4142,90 @@ select.input optgroup {
   opacity: 0.35;
   pointer-events: none;
 }
+
+/* ========================================================================== Match recap window */
+
+.rc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+}
+.rc-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rc-screen {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #121315 center / cover no-repeat;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rc-screen iframe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  border: 0;
+  transform-origin: 0 0;
+  background: transparent;
+  pointer-events: none;
+}
+.rc-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.rc-styles {
+  display: grid;
+  gap: 6px;
+}
+.rc-styles button {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: box-shadow var(--fast) var(--ease), background-color var(--fast) var(--ease);
+}
+.rc-styles button b {
+  font-weight: 600;
+  font-size: 13px;
+}
+.rc-styles button span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.rc-styles button:hover {
+  background: var(--raised);
+}
+.rc-styles button.is-on {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: var(--raised);
+}
+.rc-accents {
+  display: flex;
+  gap: 8px;
+}
+.rc-accents button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.25);
+  transition: transform var(--fast) var(--ease);
+}
+.rc-accents button.is-on {
+  box-shadow: 0 0 0 2px var(--panel, #161617), 0 0 0 4px var(--text);
+}
+.rc-accents button:active {
+  transform: scale(0.94);
+}
+.rc-toggles {
+  display: grid;
+  gap: 10px;
+}

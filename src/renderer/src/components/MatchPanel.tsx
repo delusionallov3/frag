@@ -58,7 +58,6 @@ interface Props {
   previewAutoClips: (opts: AutoClipOptions) => number
   /** exports the Broadcast match recap (intro + every highlight at these settings) */
   onRecap: (opts: AutoClipOptions) => void
-  recapBusy: boolean
 }
 
 /* ------------------------------------------------------------------ Setup (tested key + verified account) */
@@ -700,9 +699,9 @@ function Linked(p: Props & { link: MatchLink }): JSX.Element {
               ? tr('Create 1 clip', 'Créer 1 clip')
               : tr(`Create ${preview} clips`, `Créer ${preview} clips`)}
         </button>
-        <button className="btn btn-primary btn-block mp-recap" disabled={p.recapBusy} onClick={() => p.onRecap(opts)}>
+        <button className="btn btn-primary btn-block mp-recap" onClick={() => p.onRecap(opts)}>
           <Clapperboard size={15} />
-          {p.recapBusy ? tr('Preparing the recap…', 'Préparation du résumé…') : tr('Export the match recap', 'Exporter le résumé du match')}
+          {tr('Match recap…', 'Résumé du match…')}
         </button>
         {!synced && (
           <p className="mp-note">{tr('Sync first so the clips land right on time.', 'Cale la synchro d’abord pour que les clips tombent pile.')}</p>

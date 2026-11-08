@@ -2,12 +2,30 @@
  * Builds the Broadcast montage of a linked match: the intro card (map, score, agent, rank, stats)
  * and one highlight per auto clip, each with what its lower third and punch-ins need.
  */
-import type { Clip, MatchLink, MontageItem, MotionHighlight, MotionIntro } from '@shared/types'
+import type { Clip, MatchLink, MontageItem, MotionHighlight, MotionIntro, MotionOptions } from '@shared/types'
+import { DEFAULT_MOTION } from '@shared/motion'
 import { getLang } from '@shared/i18n'
 import { useAssets } from './assets'
 import { autoClips, myTeam, toVideo, type AutoClipOptions, type RoundInfo } from './match'
 
 const key = (s?: string | null): string => (s ?? '').trim().toLowerCase()
+
+/** The motion settings the user picked last (remembered on this PC) */
+const PREF = 'frag.motion'
+export function readMotion(): MotionOptions {
+  try {
+    return { ...DEFAULT_MOTION, ...(JSON.parse(localStorage.getItem(PREF) ?? '{}') as Partial<MotionOptions>) }
+  } catch {
+    return { ...DEFAULT_MOTION }
+  }
+}
+export function writeMotion(m: MotionOptions): void {
+  try {
+    localStorage.setItem(PREF, JSON.stringify(m))
+  } catch {
+    /* storage unavailable: the choice just isn't remembered */
+  }
+}
 
 /** The match card of the intro */
 export function introFor(link: MatchLink): MotionIntro {
@@ -39,7 +57,27 @@ export function introFor(link: MatchLink): MotionIntro {
     splash: map?.splash ?? null,
     portrait: agent?.portrait ?? null,
     rankIcon: tier && tier.tier > 2 ? tier.icon : null,
-    lang: getLang()
+    lang: getLang(),
+    players: match.players.map((p) => {
+      const a = index?.agents.get(key(p.agentId)) ?? index?.agents.get(key(p.agent)) ?? null
+      const tr2 =
+        (p.tier ? index?.tiers.get(p.tier) : undefined) ??
+        (p.rank ? [...(index?.tiers.values() ?? [])].find((x) => x.name.toLowerCase() === p.rank!.toLowerCase()) : undefined) ??
+        null
+      return {
+        name: p.name,
+        team: p.team === team ? 'us' : 'them',
+        agent: p.agent,
+        agentIcon: a?.icon ?? null,
+        tier: tr2 && tr2.tier > 2 ? tr2.name : (p.rank ?? null),
+        rankIcon: tr2 && tr2.tier > 2 ? tr2.icon : null,
+        k: p.kills,
+        d: p.deaths,
+        a: p.assists,
+        acs: Math.round(p.score / rounds),
+        me: p.puuid === puuid
+      }
+    })
   }
 }
 

@@ -2,9 +2,10 @@ import { tr } from '@shared/i18n'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import type { CardLayer, MontageItem, MontageOptions } from '@shared/types'
+import type { CardLayer, MontageItem, MontageOptions, MotionOptions } from '@shared/types'
 import { probe, type CutArgs } from './ffmpeg'
 import { openMotionRenderer, type SceneJob } from './motion'
+import { DEFAULT_MOTION, MOTION_TIMES } from '@shared/motion'
 
 const CQ = { high: 18, balanced: 23, light: 28 } as const
 
@@ -55,7 +56,7 @@ export async function planMontage(
   output: string
 ): Promise<MontagePlan> {
   if (items.length < 1) throw new Error(tr('No clips in the montage', 'Aucun clip dans le montage'))
-  if (opts.style === 'broadcast') return planBroadcast(items, opts, quality, audio, output)
+  if (opts.style === 'motion') return planMotion(items, opts, quality, audio, output)
   const metas = await Promise.all(items.map((it) => probe(it.videoPath)))
   const W = metas[0].width - (metas[0].width % 2) || 1920
   const H = metas[0].height - (metas[0].height % 2) || 1080
@@ -166,15 +167,16 @@ export async function planMontage(
   return { duration: total, build, cleanup: () => fs.rm(tmp, { recursive: true, force: true }) }
 }
 
-/* ------------------------------------------------------------------ Broadcast style */
+/* ------------------------------------------------------------------ Motion style (clean, broadcast, kinetic) */
 
-/** Broadcast timings (s) */
-const INTRO = 4.6
-const WIPE = 0.9
+/** Motion timings (s) */
+const INTRO = MOTION_TIMES.intro
+const LOBBY = MOTION_TIMES.lobby
+const WIPE = MOTION_TIMES.wipe
 /** where the wipe fully covers the frame: the cut sits here */
 const WIPE_CUT = 0.45
-/** punch-in on each kill: zoom added at the kill, then it settles */
-const PUNCH = 0.055
+/** zoom added on each kill, then it settles */
+const PUNCH = { off: 0, soft: 0.035, strong: 0.07 } as const
 
 /** Audio of one clip, normalised to 48 kHz stereo, with short fades so hard cuts don't click */
 function clipAudio(src: number, tracks: number, audio: CutArgs['audio'], d: number, label: string): string {
@@ -187,53 +189,63 @@ function clipAudio(src: number, tracks: number, audio: CutArgs['audio'], d: numb
   return `[${src}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS,${fades}[${label}]`
 }
 
+type Seg = { kind: 'intro' | 'lobby'; dur: number; file: string } | { kind: 'clip'; dur: number; item: MontageItem; i: number }
+
 /**
- * Match intro, then the highlights with hard cuts hidden under a red wipe that names the next round,
- * a lower third whose count pops on each kill, and a punch-in on every kill.
- * The motion layer is drawn when the job starts (prepare), the ffmpeg graph composes it.
+ * Optional match intro and scoreboard, then the highlights with hard cuts hidden under a wipe that names
+ * the next round, a lower third and score per clip, and a zoom on every kill. Everything is optional
+ * (MotionOptions). The motion layer is drawn when the job starts (prepare); the ffmpeg graph composes it.
  */
-async function planBroadcast(
+async function planMotion(
   items: MontageItem[],
   opts: MontageOptions,
   quality: CutArgs['quality'],
   audio: CutArgs['audio'],
   output: string
 ): Promise<MontagePlan> {
+  const mo: MotionOptions = { ...DEFAULT_MOTION, ...opts.motion }
   const metas = await Promise.all(items.map((it) => probe(it.videoPath)))
   const W = metas[0].width - (metas[0].width % 2) || 1920
   const H = metas[0].height - (metas[0].height % 2) || 1080
   const FPS = Math.min(240, Math.round(metas[0].fps) || 60)
   const lang = opts.intro?.lang ?? (tr('en', 'fr') as 'en' | 'fr')
-  const durs = items.map((it) => Math.max(0.6, it.end - it.start))
-  const hasIntro = !!opts.intro
-  const segDurs = [...(hasIntro ? [INTRO] : []), ...durs]
-  const total = segDurs.reduce((a, b) => a + b, 0)
+  const intro = opts.intro ?? null
 
   const tmp = join(tmpdir(), `frag-montage-${Date.now()}`)
   await fs.mkdir(tmp, { recursive: true })
 
+  // the timeline: [intro] [scoreboard] clips [scoreboard]
+  const segs: Seg[] = []
+  if (intro && mo.intro) segs.push({ kind: 'intro', dur: INTRO, file: join(tmp, 'intro.mov') })
+  if (intro && mo.lobby === 'intro' && intro.players.length) segs.push({ kind: 'lobby', dur: LOBBY, file: join(tmp, 'lobby.mov') })
+  items.forEach((item, i) => segs.push({ kind: 'clip', dur: Math.max(0.6, item.end - item.start), item, i }))
+  if (intro && mo.lobby === 'outro' && intro.players.length) segs.push({ kind: 'lobby', dur: LOBBY, file: join(tmp, 'lobby.mov') })
+  const total = segs.reduce((a, s) => a + s.dur, 0)
+
   // what the motion layer has to draw
   const scenes: SceneJob[] = []
-  if (opts.intro) scenes.push({ scene: 'intro', intro: opts.intro, duration: INTRO, out: join(tmp, 'intro.mov'), lang })
-  const lowers: { i: number; file: string; dur: number }[] = []
-  items.forEach((it, i) => {
-    const m = it.motion
-    if (!m || durs[i] < 1.6) return
-    const last = m.kills.length ? Math.max(...m.kills) : 0
-    const dur = Math.min(durs[i], Math.max(3.2, last + 2.4))
-    const file = join(tmp, `lower${i}.mov`)
-    lowers.push({ i, file, dur })
-    scenes.push({ scene: 'lower', highlight: m, duration: dur, out: file, lang })
-  })
-  // one wipe per cut: between the intro and the first clip, then between the clips
+  for (const s of segs) {
+    if (s.kind === 'intro') scenes.push({ scene: 'intro', opts: mo, intro, duration: INTRO, out: s.file, lang })
+    if (s.kind === 'lobby') scenes.push({ scene: 'lobby', opts: mo, intro, duration: LOBBY, out: s.file, lang })
+  }
+  const lowers = new Map<number, string>()
+  if (mo.lowerThirds || mo.scoreBug) {
+    for (const s of segs) {
+      if (s.kind !== 'clip' || !s.item.motion || s.dur < 1.6) continue
+      const file = join(tmp, `lower${s.i}.mov`)
+      lowers.set(s.i, file)
+      scenes.push({ scene: 'lower', opts: mo, highlight: s.item.motion, duration: s.dur, out: file, lang })
+    }
+  }
+  // one wipe per cut, naming the highlight that comes next
   const wipes: { at: number; file: string }[] = []
   let acc = 0
-  for (let j = 0; j < segDurs.length - 1; j++) {
-    acc += segDurs[j]
-    const next = items[hasIntro ? j : j + 1]
+  for (let j = 0; j < segs.length - 1; j++) {
+    acc += segs[j].dur
+    const next = segs[j + 1]
     const file = join(tmp, `wipe${j}.mov`)
     wipes.push({ at: acc, file })
-    scenes.push({ scene: 'wipe', highlight: next?.motion ?? undefined, duration: WIPE, out: file, lang })
+    scenes.push({ scene: 'wipe', opts: mo, highlight: next.kind === 'clip' ? (next.item.motion ?? null) : null, duration: WIPE, out: file, lang })
   }
 
   const prepare = async (onProgress: (p: number) => void): Promise<void> => {
@@ -258,38 +270,38 @@ async function planBroadcast(
     const parts: string[] = []
     const nextInput = (): number => inputs.filter((x) => x === '-i').length
     const norm = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${FPS}`
-    const segs: string[] = []
+    const chain: string[] = []
 
-    if (hasIntro) {
-      const k = nextInput()
-      inputs.push('-i', join(tmp, 'intro.mov'))
-      parts.push(`[${k}:v]settb=AVTB,setpts=PTS-STARTPTS,${norm},format=yuv420p,trim=duration=${INTRO}[sv_intro]`)
-      parts.push(`anullsrc=r=48000:cl=stereo:d=${INTRO}[sa_intro]`)
-      segs.push('[sv_intro][sa_intro]')
-    }
-
-    items.forEach((it, i) => {
-      const d = durs[i]
+    segs.forEach((s, j) => {
+      if (s.kind !== 'clip') {
+        const k = nextInput()
+        inputs.push('-i', s.file)
+        parts.push(`[${k}:v]settb=AVTB,setpts=PTS-STARTPTS,${norm},format=yuv420p,trim=duration=${s.dur}[sv${j}]`)
+        parts.push(`anullsrc=r=48000:cl=stereo:d=${s.dur}[sa${j}]`)
+        chain.push(`[sv${j}][sa${j}]`)
+        return
+      }
+      const { item, i, dur } = s
       const src = nextInput()
-      inputs.push('-ss', it.start.toFixed(3), '-t', d.toFixed(3), '-i', it.videoPath)
-      const kills = (it.motion?.kills ?? []).filter((k) => k >= 0 && k < d)
-      const z = kills.map((k) => `${PUNCH}*exp(-(it-${k.toFixed(3)})*7)*gte(it\\,${k.toFixed(3)})`).join('+')
+      inputs.push('-ss', item.start.toFixed(3), '-t', dur.toFixed(3), '-i', item.videoPath)
+      const kills = PUNCH[mo.punch] ? (item.motion?.kills ?? []).filter((k) => k >= 0 && k < dur) : []
+      const z = kills.map((k) => `${PUNCH[mo.punch]}*exp(-(it-${k.toFixed(3)})*7)*gte(it\\,${k.toFixed(3)})`).join('+')
       const punch = z ? `,zoompan=z='1+${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS}` : ''
-      parts.push(`[${src}:v:0]settb=AVTB,setpts=PTS-STARTPTS,${norm}${punch},format=yuv420p[c${i}]`)
-      let v = `c${i}`
-      const lo = lowers.find((l) => l.i === i)
+      parts.push(`[${src}:v:0]settb=AVTB,setpts=PTS-STARTPTS,${norm}${punch},format=yuv420p[c${j}]`)
+      let v = `c${j}`
+      const lo = lowers.get(i)
       if (lo) {
         const k = nextInput()
-        inputs.push('-i', lo.file)
-        parts.push(`[${k}:v]setpts=PTS-STARTPTS,format=argb[lo${i}]`)
-        parts.push(`[${v}][lo${i}]overlay=0:0:eof_action=pass:repeatlast=0:format=auto,format=yuv420p[cl${i}]`)
-        v = `cl${i}`
+        inputs.push('-i', lo)
+        parts.push(`[${k}:v]setpts=PTS-STARTPTS,format=argb[lo${j}]`)
+        parts.push(`[${v}][lo${j}]overlay=0:0:eof_action=pass:repeatlast=0:format=auto,format=yuv420p[cl${j}]`)
+        v = `cl${j}`
       }
-      parts.push(clipAudio(src, metas[i].audioTracks, audio, d, `sa${i}`))
-      segs.push(`[${v}][sa${i}]`)
+      parts.push(clipAudio(src, metas[i].audioTracks, audio, dur, `sa${j}`))
+      chain.push(`[${v}][sa${j}]`)
     })
 
-    parts.push(`${segs.join('')}concat=n=${segs.length}:v=1:a=1[vcat][aout]`)
+    parts.push(`${chain.join('')}concat=n=${chain.length}:v=1:a=1[vcat][aout]`)
     let v = 'vcat'
     wipes.forEach((w, j) => {
       const k = nextInput()

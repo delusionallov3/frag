@@ -427,14 +427,58 @@ export interface MotionIntro {
   rankIcon: string | null
   /** interface language for the few words on screen */
   lang: 'en' | 'fr'
+  /** all ten players, for the scoreboard */
+  players: MotionPlayer[]
+}
+
+/** One player on the motion scoreboard */
+export interface MotionPlayer {
+  name: string
+  team: 'us' | 'them'
+  agent: string
+  /** valorant-api image URLs */
+  agentIcon: string | null
+  tier: string | null
+  rankIcon: string | null
+  k: number
+  d: number
+  a: number
+  acs: number
+  /** the tracked player */
+  me: boolean
+}
+
+export type MotionStyle = 'clean' | 'broadcast' | 'kinetic'
+
+/** Everything the user can tune on a motion montage */
+export interface MotionOptions {
+  style: MotionStyle
+  /** hex colour of the accents (wipes, labels, highlights) */
+  accent: string
+  /** the match card before the first clip */
+  intro: boolean
+  /** the scoreboard with all ten players (agents, ranks, K/D/A, ACS) */
+  lobby: 'off' | 'intro' | 'outro'
+  /** players' Riot names on the scoreboard (else their agent) */
+  names: boolean
+  /** the highlight's label (3K, ACE, clutch) over each clip */
+  lowerThirds: boolean
+  /** the round and score at the top of each clip */
+  scoreBug: boolean
+  /** the round written on each transition */
+  wipeLabels: boolean
+  /** zoom on every kill */
+  punch: 'off' | 'soft' | 'strong'
 }
 
 export interface MontageOptions {
   /** crossfade length between two clips, 0 = hard cut (classic style) */
   transition: number
   name: string
-  /** classic: fades and title cards; broadcast: match intro, red wipes, lower thirds, punch-ins on kills */
-  style?: 'classic' | 'broadcast'
+  /** classic: fades and title cards; motion: match intro, wipes, lower thirds, scoreboard, punch-ins (see motion) */
+  style?: 'classic' | 'motion'
+  motion?: MotionOptions
+  /** match data for the intro and the scoreboard (one game only) */
   intro?: MotionIntro | null
 }
 

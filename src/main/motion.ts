@@ -10,14 +10,15 @@ import { BrowserWindow } from 'electron'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import { FFMPEG } from './ffmpeg'
-import type { MotionHighlight, MotionIntro } from '@shared/types'
+import type { MotionHighlight, MotionIntro, MotionOptions } from '@shared/types'
 
-export type MotionScene = 'intro' | 'wipe' | 'lower'
+export type MotionScene = 'intro' | 'lobby' | 'wipe' | 'lower'
 
 export interface SceneJob {
   scene: MotionScene
-  intro?: MotionIntro
-  highlight?: MotionHighlight
+  opts: MotionOptions
+  intro?: MotionIntro | null
+  highlight?: MotionHighlight | null
   /** seconds */
   duration: number
   out: string
@@ -52,7 +53,7 @@ export async function openMotionRenderer(width: number, height: number): Promise
 
   const render = async (job: SceneJob, onFrame?: (done: number, total: number) => void): Promise<void> => {
     await win.webContents.executeJavaScript(
-      `window.setup(${JSON.stringify({ scene: job.scene, width, height, intro: job.intro, highlight: job.highlight, duration: job.duration, lang: job.lang })})`
+      `window.setup(${JSON.stringify({ scene: job.scene, width, height, opts: job.opts, intro: job.intro, highlight: job.highlight, duration: job.duration, lang: job.lang })})`
     )
     const total = Math.max(1, Math.round(job.duration * MOTION_FPS))
     const ff = spawn(

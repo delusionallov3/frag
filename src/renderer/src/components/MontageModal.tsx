@@ -6,7 +6,7 @@ import { useApp } from '../store'
 import { baseName, fmtClipLen, stripExt } from '../lib/format'
 import { CARD_ACCENTS, CARD_STYLES, renderCard } from '../lib/cards'
 import { analyse } from '../lib/match'
-import { highlightFor, introFor } from '../lib/recap'
+import { highlightFor, introFor, readMotion } from '../lib/recap'
 import Modal from './Modal'
 import CardPreview from './CardPreview'
 
@@ -25,7 +25,7 @@ const transitions = (): { value: number; label: string }[] => [
   { value: 0, label: tr('Hard cut', 'Coupe sèche') },
   { value: 0.3, label: tr('Short fade', 'Fondu court') },
   { value: 0.8, label: tr('Long fade', 'Fondu long') },
-  { value: BROADCAST, label: 'Broadcast' }
+  { value: BROADCAST, label: 'Motion' }
 ]
 
 /** Title card preferences remembered between sessions (just a convenience) */
@@ -174,7 +174,8 @@ export default function MontageModal(): JSX.Element | null {
     const res = await window.frag.exportMontage(items, {
       transition: 0,
       name: name.trim(),
-      style: 'broadcast',
+      style: 'motion',
+      motion: readMotion(),
       intro: only ? introFor(only) : null
     })
     setBusy(false)
@@ -290,7 +291,7 @@ export default function MontageModal(): JSX.Element | null {
             <span className="mt-total">{shown ? `clip ${picks.indexOf(shown) + 1}` : tr('example', 'exemple')}</span>
           </div>
           {transition === BROADCAST && (
-            <p className="mp-note">{tr('Broadcast draws its own titles: the match intro, the round on each wipe and a lower third per highlight.', 'Broadcast dessine ses propres titres : l’intro du match, le round sur chaque volet et un bandeau par temps fort.')}</p>
+            <p className="mp-note">{tr('Motion draws its own titles with the style and options chosen in a match recap (Match panel).', 'Motion dessine ses propres titres, avec le style et les options choisis dans un résumé de match (panneau Match).')}</p>
           )}
           <div className={`mt-style-body ${transition === BROADCAST ? 'is-off' : ''}`}>
             <CardPreview
