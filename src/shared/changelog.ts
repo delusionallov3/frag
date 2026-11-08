@@ -13,6 +13,27 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.1',
+    date: '2026-11-08',
+    title: ['Mark, slow down, share', 'Marquer, ralentir, partager'],
+    items: [
+      [
+        'Press F9 during a game to mark a moment: when the recording ends it becomes a marker and a clip of the 10 seconds before. The key can be changed in the OBS settings.',
+        'Appuie sur F9 pendant une game pour marquer un moment : à la fin de l’enregistrement, il devient un marqueur et un clip des 10 secondes d’avant. La touche se change dans les réglages OBS.'
+      ],
+      [
+        'Match recaps can have music: it loops under the whole video and gets quieter when the game is loud.',
+        'Les résumés de match peuvent avoir une musique : elle tourne sous toute la vidéo et baisse quand le jeu est fort.'
+      ],
+      ['The last kill of an ace or a clutch plays in slow motion.', 'Le dernier kill d’un ace ou d’un clutch passe au ralenti.'],
+      [
+        'Copy file on a finished export puts the video on the clipboard: paste it straight into Discord.',
+        'Copier le fichier sur un export terminé met la vidéo dans le presse-papiers : colle-la directement dans Discord.'
+      ],
+      ['The win/loss edge in the library no longer leaves a mark after hovering.', 'Le bord victoire/défaite de la bibliothèque ne laisse plus de trace après le survol.']
+    ]
+  },
+  {
     version: '0.4.0',
     date: '2026-11-08',
     title: ['Match recaps with motion design', 'Des résumés de match en motion design'],
