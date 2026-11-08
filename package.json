@@ -1,7 +1,7 @@
 {
   "name": "frag",
   "productName": "Frag",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Découpe tes recs Valorant en clips, vite et proprement.",
   "main": "./out/main/index.js",
   "author": "Lorenzo",
