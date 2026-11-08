@@ -44,6 +44,7 @@ const api = {
   setSettings: (patch: Partial<Settings>): Promise<Settings> => ipcRenderer.invoke('settings:set', patch),
   pickFolder: (title: string): Promise<string | null> => ipcRenderer.invoke('dialog:folder', title),
   pickVideo: (): Promise<string | null> => ipcRenderer.invoke('dialog:video'),
+  pickMusic: (): Promise<string | null> => ipcRenderer.invoke('dialog:music'),
 
   listVideos: (): Promise<VideoEntry[]> => ipcRenderer.invoke('library:list'),
   onLibraryChanged: (fn: () => void) => on('library:changed', fn),
@@ -91,6 +92,7 @@ const api = {
   refreshAssets: (): Promise<{ assets: ValAssets | null; error: string | null }> => ipcRenderer.invoke('assets:refresh'),
 
   showItem: (path: string): Promise<void> => ipcRenderer.invoke('shell:showItem', path),
+  copyFile: (path: string): Promise<boolean> => ipcRenderer.invoke('shell:copyFile', path),
   openFolder: (path: string): Promise<string> => ipcRenderer.invoke('shell:openFolder', path),
 
   obsTest: (host: string, port: number, password: string | null): Promise<ObsTest> =>

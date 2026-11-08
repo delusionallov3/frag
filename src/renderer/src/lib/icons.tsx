@@ -23,6 +23,7 @@ import {
   CheckCircle as PhCheckCircle,
   CircleNotch as PhCircleNotch,
   Clock as PhClock,
+  Copy as PhCopy,
   Crosshair as PhCrosshair,
   DownloadSimple as PhDownloadSimple,
   FileVideo as PhFileVideo,
@@ -139,3 +140,4 @@ export const Unlink = make(PhLinkBreak)
 export const Volume2 = make(PhSpeakerHigh)
 export const VolumeX = make(PhSpeakerSlash)
 export const Wand2 = make(PhMagicWand)
+export const Copy = make(PhCopy)

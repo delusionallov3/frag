@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { X, FolderOpen, RotateCcw, Square, CheckCircle2, AlertCircle, Clock, Loader2, Ban } from '../lib/icons'
+import { X, FolderOpen, RotateCcw, Square, CheckCircle2, AlertCircle, Clock, Loader2, Ban, Copy } from '../lib/icons'
 import type { ExportJob } from '@shared/types'
 import { tr } from '@shared/i18n'
-import { useApp } from '../store'
+import { copyExport, useApp } from '../store'
 import { baseName, fmtClipLen } from '../lib/format'
 
 const encoderLabel = (e: 'nvenc' | 'cpu' | 'copy'): string => (e === 'copy' ? tr('Copy', 'Copie') : e.toUpperCase())
@@ -44,6 +44,11 @@ function JobRow({ job }: { job: ExportJob }): JSX.Element {
         {job.status === 'error' && <div className="job-error">{job.error}</div>}
       </div>
       <div className="job-actions">
+        {job.status === 'done' && (
+          <button className="icon-btn" title={tr('Copy the file (paste it in Discord)', 'Copier le fichier (à coller dans Discord)')} onClick={() => copyExport(job.outputPath)}>
+            <Copy size={15} />
+          </button>
+        )}
         {job.status === 'done' && (
           <button className="icon-btn" title={tr('Show in folder', 'Afficher dans le dossier')} onClick={() => window.frag.showItem(job.outputPath)}>
             <FolderOpen size={15} />

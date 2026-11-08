@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { AutoRecStatus, EncoderInfo, ExportJob, Settings } from '@shared/types'
-import { setLang } from '@shared/i18n'
+import { setLang, tr } from '@shared/i18n'
 
 interface Toast {
   id: number
@@ -57,7 +57,18 @@ export const useApp = create<AppState>((set, get) => ({
     setLang(settings.language)
     document.documentElement.lang = settings.language
     set({ settings, jobs })
-    window.frag.onJobs((jobs) => set({ jobs }))
+    window.frag.onJobs((jobs) => {
+      // an export that just finished: say so, with a one-click copy for Discord
+      const before = new Map(get().jobs.map((j) => [j.id, j.status]))
+      const fresh = jobs.filter((j) => j.status === 'done' && before.get(j.id) === 'running')
+      set({ jobs })
+      const j = fresh[fresh.length - 1]
+      if (j)
+        get().showToast(tr(`Exported: ${j.clipName}`, `Exporté : ${j.clipName}`), {
+          label: tr('Copy file', 'Copier le fichier'),
+          run: () => void copyExport(j.outputPath)
+        })
+    })
     window.frag.autoRecStatus().then((autoRec) => set({ autoRec }))
     window.frag.onAutoRecStatus((autoRec) => set({ autoRec }))
     window.frag.encoders().then((encoders) => set({ encoders }))
@@ -87,3 +98,9 @@ export const useApp = create<AppState>((set, get) => ({
     toastTimer = setTimeout(() => set({ toast: null }), 4200)
   }
 }))
+
+/** Copies an exported file to the clipboard (paste it straight into Discord) and says so */
+export async function copyExport(path: string): Promise<void> {
+  const ok = await window.frag.copyFile(path)
+  useApp.getState().showToast(ok ? tr('File copied: paste it in Discord or a chat', 'Fichier copié : colle-le dans Discord ou un chat') : tr('Couldn’t copy the file', 'Impossible de copier le fichier'))
+}

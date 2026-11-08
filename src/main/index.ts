@@ -1,5 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
-import { createReadStream, promises as fs } from 'fs'
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, protocol, shell } from 'electron'
+import { createReadStream, existsSync, promises as fs } from 'fs'
+import { spawn } from 'child_process'
 import { extname, join } from 'path'
 import { Readable } from 'stream'
 import type { Clip, ExportOptions, MatchData, MontageItem, MontageOptions, Project, Region, Settings } from '@shared/types'
@@ -17,7 +18,7 @@ import {
   setSettings,
   statsEntries
 } from './store'
-import { autoRecStatus, resetObs, startAutoRec, testObs } from './autorec'
+import { autoRecStatus, markMoment, resetObs, startAutoRec, testObs } from './autorec'
 import { tr } from '@shared/i18n'
 import { createTray, destroyTray, refreshTray, setTrayUpdate, updateTrayStatus } from './tray'
 import { checkForUpdates, installUpdate, startUpdater, updateStatus } from './updater'
@@ -130,6 +131,19 @@ function applyLoginItem(enabled: boolean): void {
   app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--hidden'] })
 }
 
+/** The global key that marks a moment while a game is recorded (works over the game, any window) */
+let markKey: string | null = null
+function applyMarkKey(key: string | null): void {
+  if (markKey) globalShortcut.unregister(markKey)
+  markKey = null
+  if (!key) return
+  try {
+    if (globalShortcut.register(key, () => void markMoment())) markKey = key
+  } catch {
+    /* not a valid accelerator: leave it off */
+  }
+}
+
 function send(channel: string, payload?: unknown): void {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
 }
@@ -221,6 +235,7 @@ function registerIpc(): void {
     if ('launchAtLogin' in patch) applyLoginItem(next.launchAtLogin)
     if ('recsFolder' in patch) await rewatch()
     if (patch.obs && ('host' in patch.obs || 'port' in patch.obs)) resetObs()
+    if (patch.obs && 'markKey' in patch.obs) applyMarkKey(next.obs.markKey)
     if ('language' in patch) refreshTray()
     return next
   })
@@ -248,6 +263,15 @@ function registerIpc(): void {
       title: tr('Open a video', 'Ouvrir une vidéo'),
       properties: ['openFile'],
       filters: [{ name: tr('Videos', 'Vidéos'), extensions: ['mp4', 'mkv', 'mov', 'm4v', 'webm'] }]
+    })
+    return res.canceled ? null : res.filePaths[0]
+  })
+
+  ipcMain.handle('dialog:music', async () => {
+    const res = await dialog.showOpenDialog(win!, {
+      title: tr('Pick a music track', 'Choisir une musique'),
+      properties: ['openFile'],
+      filters: [{ name: tr('Audio', 'Audio'), extensions: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'opus'] }]
     })
     return res.canceled ? null : res.filePaths[0]
   })
@@ -349,6 +373,16 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('shell:showItem', (_e, path: string) => shell.showItemInFolder(path))
+  // Puts the file itself on the clipboard (a file drop, like Ctrl+C in Explorer): paste it in Discord, a chat, a folder
+  ipcMain.handle('shell:copyFile', (_e, path: string) =>
+    new Promise<boolean>((resolve) => {
+      if (process.platform !== 'win32' || !existsSync(path)) return resolve(false)
+      const lit = path.replace(/'/g, "''")
+      const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Set-Clipboard -LiteralPath '${lit}'`], { windowsHide: true })
+      ps.on('error', () => resolve(false))
+      ps.on('close', (code) => resolve(code === 0))
+    })
+  )
   ipcMain.handle('shell:openFolder', async (_e, path: string) => {
     await fs.mkdir(path, { recursive: true }).catch(() => {})
     return shell.openPath(path)
@@ -427,7 +461,10 @@ app.on('second-instance', () => showWindow())
 app.on('before-quit', () => {
   isQuitting = true
 })
-app.on('will-quit', () => destroyTray())
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+  destroyTray()
+})
 
 app.whenReady().then(async () => {
   if (!gotLock) return
@@ -437,6 +474,7 @@ app.whenReady().then(async () => {
   closeToTray = settings.closeToTray
   trayHintShown = settings.trayHintShown
   applyLoginItem(settings.launchAtLogin)
+  applyMarkKey(settings.obs.markKey)
   registerMediaProtocol()
   registerIpc()
   createTray(
