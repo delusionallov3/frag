@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frag — Clip your Valorant games</title>
+<meta name="description" content="Frag records your Valorant games with OBS, links each recording to its match and turns your best rounds into clips in a few keystrokes. Free for Windows.">
+<meta property="og:title" content="Frag — Clip your Valorant games">
+<meta property="og:description" content="Auto-record with OBS, kills on the timeline, clips in one key. Free for Windows.">
+<meta name="theme-color" content="#0f0f10">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230f0f10'/%3E%3Cpath d='M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z' fill='%23ededed'/%3E%3Cpath d='M17 13h5l-1.5 7h-5z' fill='%23ff4655'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --canvas: #0c0c0d;
+  --page: #0f0f10;
+  --panel: #161617;
+  --raised: #1f1f21;
+  --track: #18181a;
+  --line: rgba(237, 237, 237, 0.08);
+  --line-2: rgba(237, 237, 237, 0.14);
+  --text: #ededed;
+  --muted: #a1a1a6;
+  --faint: #85858b;
+  --accent: #ff4655;
+  --accent-soft: rgba(255, 70, 85, 0.12);
+  --ok: #4cc38a;
+  --spike: #e8c060;
+  --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --sans: 'Geist', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Geist Mono', Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --wrap: 1120px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font: 400 16px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+img, svg { display: block; }
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+@media (max-width: 640px) { .wrap { padding: 0 16px; } }
+
+/* ------------------------------------------------------------ nav */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(15, 15, 16, 0.78);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; font: 800 italic 26px/1 var(--display); letter-spacing: 0.04em; }
+.brand svg { width: 26px; height: 26px; }
+.nav-links { display: flex; gap: 24px; font-size: 14px; color: var(--muted); }
+.nav-links a:hover { color: var(--text); }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.lang { display: flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
+.lang button {
+  all: unset; cursor: pointer; padding: 5px 9px;
+  font: 500 12px/1 var(--mono); color: var(--faint);
+}
+.lang button.on { background: var(--raised); color: var(--text); }
+.icon-link { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; color: var(--muted); }
+.icon-link:hover { background: var(--raised); color: var(--text); }
+@media (max-width: 760px) { .nav-links { display: none; } }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  height: 44px; padding: 0 20px; border-radius: 10px;
+  font: 600 15px/1 var(--sans); white-space: nowrap;
+  transition: background-color 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #ff5a68; }
+.btn-ghost { border: 1px solid var(--line-2); color: var(--text); }
+.btn-ghost:hover { background: var(--raised); }
+.btn-sm { height: 36px; padding: 0 14px; font-size: 14px; border-radius: 8px; }
+.btn small { font: 400 12px/1 var(--mono); opacity: 0.8; }
+
+/* ------------------------------------------------------------ hero */
+.hero { position: relative; padding: 96px 0 40px; text-align: center; }
+.hero::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 100vw; margin-left: -50vw;
+  background:
+    radial-gradient(600px 300px at 50% 0%, rgba(255, 70, 85, 0.16), transparent 70%),
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 32px 32px;
+  mask-image: linear-gradient(#000 30%, transparent 90%);
+  -webkit-mask-image: linear-gradient(#000 30%, transparent 90%);
+  pointer-events: none;
+}
+.hero > * { position: relative; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 12px; border: 1px solid var(--line-2); border-radius: 999px;
+  font: 500 12px/1 var(--mono); color: var(--muted);
+}
+.eyebrow b { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+h1 {
+  margin: 24px auto 0; max-width: 900px;
+  font: 800 italic clamp(56px, 10vw, 112px)/0.9 var(--display);
+  text-transform: uppercase; letter-spacing: 0.01em;
+}
+h1 em { font-style: inherit; color: var(--accent); }
+.lede { margin: 24px auto 0; max-width: 620px; font-size: 18px; color: var(--muted); }
+.cta { margin-top: 36px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.cta-note { margin-top: 14px; font: 400 12px/1.5 var(--mono); color: var(--faint); }
+
+/* ------------------------------------------------------------ demo (editor mock) */
+.demo {
+  margin: 64px auto 0; max-width: 1040px;
+  border: 1px solid var(--line-2); border-radius: 16px; overflow: hidden;
+  background: var(--panel); text-align: left;
+  box-shadow: 0 40px 120px -40px rgba(255, 70, 85, 0.25), 0 30px 80px -30px #000;
+}
+.demo-bar { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--faint); }
+.demo-bar .brand { font-size: 17px; color: var(--text); }
+.demo-bar .brand svg { width: 16px; height: 16px; }
+.demo-bar .crumb { color: var(--muted); }
+.demo-bar .pill { margin-left: auto; display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 500 11px/1.3 var(--mono); }
+.demo-bar .pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+.demo-body { display: grid; grid-template-columns: 1fr 260px; }
+.player {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+  background:
+    radial-gradient(80% 60% at 30% 70%, rgba(87, 140, 160, 0.35), transparent 70%),
+    radial-gradient(60% 50% at 75% 35%, rgba(205, 160, 110, 0.35), transparent 70%),
+    linear-gradient(160deg, #2a3138, #1a1d22 60%, #121315);
+}
+.player::after { /* crosshair */
+  content: ''; position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%);
+  background: linear-gradient(#5cf2c0, #5cf2c0) center/2px 100% no-repeat, linear-gradient(#5cf2c0, #5cf2c0) center/100% 2px no-repeat;
+  opacity: 0.85;
+}
+.hud-score { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; font: 700 13px/1 var(--mono); }
+.hud-score span { padding: 4px 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.45); }
+.hud-score .a { color: #5cf2c0; } .hud-score .b { color: #ff7a85; }
+.killfeed { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.kf {
+  display: flex; align-items: center; gap: 8px; padding: 4px 9px; border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55); font: 500 11px/1.2 var(--sans); white-space: nowrap;
+  border-left: 2px solid transparent; animation: kfin 0.25s var(--ease);
+}
+.kf.mine { background: rgba(255, 70, 85, 0.22); border-left-color: var(--accent); }
+.kf.dead { border-left-color: #ededed; }
+.kf .gun { font: 500 10px/1 var(--mono); color: var(--faint); }
+@keyframes kfin { from { opacity: 0; transform: translateX(10px); } }
+.hud-bottom { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 16px; font: 700 20px/1 var(--mono); color: #ededed; text-shadow: 0 1px 4px #000; }
+.hud-bottom small { font-size: 12px; color: var(--muted); margin-left: 3px; }
+.hud-bottom .abil { display: flex; gap: 5px; }
+.hud-bottom .abil i { width: 18px; height: 18px; border-radius: 3px; border: 1px solid rgba(237, 237, 237, 0.5); background: rgba(0, 0, 0, 0.35); }
+.hud-bottom .abil i.on { border-color: #5cf2c0; background: rgba(92, 242, 192, 0.25); }
+.minimap { position: absolute; top: 10px; left: 10px; width: 16%; aspect-ratio: 1; border-radius: 4px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(237, 237, 237, 0.15);
+  background-image: linear-gradient(rgba(237,237,237,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(237,237,237,.12) 1px, transparent 1px); background-size: 25% 25%; }
+.minimap::after { content: ''; position: absolute; left: 40%; top: 58%; width: 7px; height: 7px; border-radius: 50%; background: #5cf2c0; box-shadow: 0 0 0 3px rgba(92, 242, 192, 0.25); }
+.keycap {
+  position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%) scale(0.9);
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 10px;
+  background: rgba(10, 10, 11, 0.8); border: 1px solid var(--line-2);
+  font: 500 13px/1 var(--sans); color: var(--muted); opacity: 0; transition: opacity 0.2s, transform 0.2s var(--ease);
+}
+.keycap kbd {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 6px;
+  background: #ededed; color: #0f0f10; font: 700 15px/1 var(--mono);
+  box-shadow: 0 3px 0 #9a9aa0;
+}
+.keycap.show { opacity: 1; transform: translateX(-50%) scale(1); }
+.keycap.show kbd { animation: press 0.35s var(--ease); }
+@keyframes press { 40% { transform: translateY(3px); box-shadow: 0 0 0 #9a9aa0; } }
+
+.side { border-left: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.side-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 8px; background: var(--canvas); }
+.side-tabs span { flex: 1; text-align: center; padding: 5px 0; border-radius: 6px; color: var(--faint); font-size: 12px; }
+.side-tabs span.on { background: var(--raised); color: var(--text); }
+.clip-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--canvas); border: 1px solid var(--line); animation: kfin 0.3s var(--ease); }
+.clip-row.sel { border-color: rgba(255, 70, 85, 0.6); background: var(--accent-soft); }
+.clip-row .n { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 4px; background: var(--raised); font: 500 10px/1 var(--mono); color: var(--muted); }
+.clip-row .name { flex: 1; font-weight: 500; }
+.clip-row .len { font: 400 11px/1 var(--mono); color: var(--faint); }
+.side-empty { padding: 14px 10px; border-radius: 8px; border: 1px dashed var(--line-2); color: var(--faint); font-size: 12px; line-height: 1.5; }
+.side-empty kbd { padding: 1px 5px; border-radius: 4px; background: var(--raised); font: 500 11px var(--mono); color: var(--text); }
+.export-btn { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; position: relative; overflow: hidden; }
+.export-btn .bar { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255, 255, 255, 0.22); }
+
+.timeline { border-top: 1px solid var(--line); padding: 10px 14px 14px; position: relative; }
+.tl-row { position: relative; height: 34px; border-radius: 6px; background: var(--track); margin-top: 6px; overflow: hidden; }
+.tl-row.thumbs { height: 40px; background: repeating-linear-gradient(90deg, #232326 0 calc(12.5% - 3px), var(--track) calc(12.5% - 3px) 12.5%); }
+.tl-row.wave { height: 26px; background: transparent; }
+.tl-row.wave svg { width: 100%; height: 100%; }
+.tl-row.match { height: 22px; }
+.ruler { position: relative; height: 14px; font: 400 10px/1 var(--mono); color: var(--faint); }
+.ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+.kill { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; transform: rotate(45deg); background: var(--accent); opacity: 0.55; transition: opacity 0.2s, transform 0.2s; }
+.kill.death { background: #ededed; }
+.kill.plant { background: var(--spike); transform: none; border-radius: 2px; }
+.kill.hit { opacity: 1; transform: rotate(45deg) scale(1.45); }
+.clip-block {
+  position: absolute; top: 3px; bottom: 3px; border-radius: 5px;
+  border: 2px solid var(--accent); background: rgba(255, 70, 85, 0.18);
+  transform-origin: right; transform: scaleX(0); transition: transform 0.45s var(--ease);
+}
+.clip-block.show { transform: scaleX(1); }
+.clip-block.old { border-color: rgba(237, 237, 237, 0.45); background: rgba(237, 237, 237, 0.08); transform: scaleX(1); }
+.clip-block b { position: absolute; left: 0; right: 0; top: 0; height: 12px; background: var(--accent); font: 700 9px/12px var(--sans); color: #0f0f10; padding-left: 6px; overflow: hidden; white-space: nowrap; }
+.playhead { position: absolute; top: 4px; bottom: 6px; width: 2px; margin-left: -1px; background: var(--accent); z-index: 3; pointer-events: none; }
+.playhead::before { content: ''; position: absolute; top: 0; left: -6px; width: 14px; height: 10px; background: var(--accent); clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); }
+.tl-inner { position: relative; }
+
+@media (max-width: 820px) {
+  .demo-body { grid-template-columns: 1fr; }
+  .side { border-left: 0; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; }
+  .side-tabs, .export-btn, .side-empty { display: none; }
+  .clip-row { flex: 1 1 200px; }
+}
+@media (max-width: 520px) {
+  .demo-bar .crumb { display: none; }
+  .kf { font-size: 9px; padding: 3px 6px; }
+  .keycap { font-size: 11px; }
+}
+
+/* ------------------------------------------------------------ sections */
+section { padding: 120px 0 0; }
+.kicker { font: 500 12px/1 var(--mono); color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
+h2 { margin: 14px 0 0; font: 800 italic clamp(40px, 6vw, 64px)/0.95 var(--display); text-transform: uppercase; }
+.sub { margin: 16px 0 0; max-width: 560px; color: var(--muted); font-size: 17px; }
+
+.steps { margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: s; }
+.step { position: relative; padding: 28px; border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(var(--panel), var(--page)); }
+.step::before { counter-increment: s; content: '0' counter(s); font: 800 italic 64px/1 var(--display); color: var(--raised); position: absolute; right: 20px; top: 14px; }
+.step h3 { margin: 0; font-size: 19px; font-weight: 600; }
+.step p { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+.step .tag { display: inline-block; margin-bottom: 18px; padding: 4px 9px; border-radius: 6px; background: var(--raised); font: 500 11px/1.3 var(--mono); color: var(--muted); }
+.step .tag.rec { color: var(--accent); background: var(--accent-soft); }
+@media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+
+.features { margin-top: 48px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+.card { grid-column: span 2; padding: 24px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.card.wide { grid-column: span 3; }
+.card h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+.card .viz { margin-top: auto; padding-top: 18px; }
+@media (max-width: 960px) { .card, .card.wide { grid-column: span 3; } }
+@media (max-width: 640px) { .features { grid-template-columns: 1fr; } .card, .card.wide { grid-column: auto; } }
+
+/* small visuals */
+.v-review { display: flex; flex-wrap: wrap; gap: 6px; }
+.v-review span { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 12px; color: var(--muted); }
+.v-review span.on { border-color: rgba(255, 70, 85, 0.6); color: var(--accent); background: var(--accent-soft); }
+.v-review span.good { border-color: rgba(76, 195, 138, 0.5); color: var(--ok); }
+.v-kd { width: 100%; height: 90px; }
+.v-card { position: relative; aspect-ratio: 16/5; border-radius: 10px; overflow: hidden; background: linear-gradient(140deg, #3a2f2a, #1b1c20 60%); }
+.v-card .slab { position: absolute; left: 14px; bottom: 16px; }
+.v-card .slab b { display: inline-block; padding: 4px 18px 2px 12px; background: var(--accent); color: #0f0f10; font: 800 italic 28px/1 var(--display); text-transform: uppercase; clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%); }
+.v-card .slab i { display: block; margin-top: 4px; padding: 3px 10px; background: #0f0f10; color: #ededed; font: 700 italic 12px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; width: max-content; }
+.v-obs { display: flex; align-items: center; gap: 10px; font: 500 12px/1 var(--mono); color: var(--muted); }
+.v-obs .rec { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.v-obs .rec i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: blink 1.2s infinite; }
+.v-obs .arrow { color: var(--faint); }
+.v-match { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px; border-radius: 10px; background: var(--canvas); border: 1px solid var(--line); }
+.v-match .map { width: 54px; height: 36px; border-radius: 6px; background: linear-gradient(135deg, #c9a46c, #6b5a45); }
+.v-match b { display: block; font-size: 14px; }
+.v-match span { font-size: 12px; color: var(--faint); }
+.v-match .score { font: 800 italic 26px/1 var(--display); color: var(--ok); }
+.v-tray { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.v-tray .menu { display: flex; flex-direction: column; min-width: 230px; padding: 4px; border-radius: 8px; background: #202022; border: 1px solid var(--line-2); font-size: 12.5px; box-shadow: 0 12px 30px -10px #000; }
+.v-tray .menu > span { padding: 6px 10px; border-radius: 5px; }
+.v-tray .menu > span:first-child { background: var(--raised); }
+.v-tray .menu .dis { color: var(--faint); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; }
+.v-tray .bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-radius: 8px; background: var(--canvas); border: 1px solid var(--line); }
+.v-tray .bar i { width: 14px; height: 14px; border-radius: 3px; background: var(--raised); }
+.v-tray .bar b { position: relative; width: 18px; height: 18px; }
+.v-tray .bar b::after { content: ''; position: absolute; right: -3px; bottom: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--canvas); }
+.v-tray .bar em { font: normal 500 11px/1 var(--mono); color: var(--muted); }
+.v-export { display: flex; flex-direction: column; gap: 6px; }
+.v-export div { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+.v-export .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; }
+.v-export .bar i { display: block; height: 100%; background: var(--accent); }
+.v-export .tagp { font: 500 10px/1 var(--mono); padding: 3px 6px; border-radius: 4px; background: var(--raised); color: var(--muted); }
+
+/* shortcuts strip */
+.keys { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 12px; }
+.key { display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 14px; color: var(--muted); }
+.key kbd { min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 7px; background: var(--raised); border: 1px solid var(--line-2); border-bottom-width: 3px; font: 600 14px/1 var(--mono); color: var(--text); }
+
+/* privacy */
+.privacy { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; }
+.privacy ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.privacy li { display: flex; gap: 14px; padding: 16px 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 15px; color: var(--muted); }
+.privacy li b { color: var(--text); font-weight: 600; }
+.privacy li svg { flex: none; width: 18px; height: 18px; margin-top: 3px; color: var(--ok); }
+@media (max-width: 860px) { .privacy { grid-template-columns: 1fr; gap: 24px; } }
+
+/* faq */
+.faq { margin-top: 40px; display: grid; gap: 10px; max-width: 820px; }
+details { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; padding: 18px 20px; font-weight: 500; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: '+'; font: 400 20px/1 var(--mono); color: var(--faint); transition: transform 0.2s var(--ease); }
+details[open] summary::after { transform: rotate(45deg); }
+details p { margin: 0; padding: 0 20px 18px; color: var(--muted); font-size: 15px; }
+details code { font: 500 13px var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--raised); color: var(--text); }
+
+/* final cta */
+.final { margin: 140px 0 0; padding: 72px 24px; text-align: center; border-radius: 20px; border: 1px solid var(--line); position: relative; overflow: hidden;
+  background: radial-gradient(500px 240px at 50% 120%, rgba(255, 70, 85, 0.28), transparent 70%), var(--panel); }
+.final h2 { margin-top: 0; }
+.final p { color: var(--muted); margin: 14px auto 0; max-width: 480px; }
+
+footer { margin-top: 80px; padding: 32px 0 48px; border-top: 1px solid var(--line); font-size: 13px; color: var(--faint); }
+footer .row { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: center; }
+footer nav { display: flex; gap: 20px; }
+footer nav a:hover { color: var(--text); }
+footer .legal { margin-top: 20px; font-size: 11.5px; line-height: 1.6; max-width: 820px; }
+
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Frag">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg>
+      FRAG
+    </a>
+    <nav class="nav-links">
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-right">
+      <div class="lang" role="group" aria-label="Language">
+        <button data-lang="en" class="on">EN</button>
+        <button data-lang="fr">FR</button>
+      </div>
+      <a class="icon-link" href="https://github.com/delusionallov3/frag" aria-label="GitHub">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.7 5.38-5.26 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+      </a>
+      <a class="btn btn-primary btn-sm js-download" href="https://github.com/delusionallov3/frag/releases/latest" data-i18n="nav.download">Download</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap">
+    <div class="hero">
+      <span class="eyebrow"><b></b><span data-i18n="hero.eyebrow">Free for Windows</span> · <span class="js-version">v0.3.0</span></span>
+      <h1 data-i18n-html="hero.title">Clip your Valorant games. <em>Fast.</em></h1>
+      <p class="lede" data-i18n="hero.lede">Frag records your games with OBS, links each recording to its match and puts every kill on the timeline. Press C, you've got a clip.</p>
+      <div class="cta">
+        <a class="btn btn-primary js-download" href="https://github.com/delusionallov3/frag/releases/latest">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          <span data-i18n="hero.download">Download for Windows</span>
+          <small class="js-size"></small>
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/delusionallov3/frag" data-i18n="hero.source">View on GitHub</a>
+      </div>
+      <p class="cta-note" data-i18n="hero.note">Windows 10 / 11 · updates itself · English &amp; French</p>
+
+      <!-- animated editor -->
+      <div class="demo" aria-label="Frag editor demo">
+        <div class="demo-bar">
+          <span class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg>Frag</span>
+          <span class="crumb">Ascent · Competitive · 13–9</span>
+          <span class="pill"><i></i><span data-i18n="demo.synced">Synced on killfeed</span></span>
+        </div>
+        <div class="demo-body">
+          <div class="player">
+            <div class="hud-score"><span class="a js-ally">6</span><span class="b js-enemy">4</span></div>
+            <div class="killfeed js-feed"></div>
+            <div class="hud-bottom"><span class="hp">100</span><span class="abil"><i></i><i></i><i class="on"></i><i></i></span><span class="ammo">25<small>/ 50</small></span></div>
+            <div class="minimap"></div>
+            <div class="keycap js-key"><kbd>C</kbd><span data-i18n="demo.clip">Clip the last 10 seconds</span></div>
+          </div>
+          <aside class="side">
+            <div class="side-tabs"><span class="on">Clips</span><span>Match</span><span data-i18n="demo.review">Review</span></div>
+            <div class="clip-row"><span class="n">1</span><span class="name">R3 · 2K · Sheriff</span><span class="len">8.4 s</span></div>
+            <div class="js-cliplist"></div>
+            <div class="export-btn"><span class="bar js-exbar"></span><span class="js-extxt" data-i18n="demo.export">Export · NVENC</span></div>
+          </aside>
+        </div>
+        <div class="timeline">
+          <div class="tl-inner js-tl">
+            <div class="ruler js-ruler"></div>
+            <div class="tl-row thumbs">
+              <div class="clip-block old" style="left:8%;width:11%"></div>
+              <div class="clip-block js-newclip" style="left:52%;width:17%"><b>R7 · 3K · VANDAL</b></div>
+            </div>
+            <div class="tl-row wave"><svg class="js-wave" preserveAspectRatio="none" viewBox="0 0 400 26"></svg></div>
+            <div class="tl-row match js-kills"></div>
+            <div class="playhead js-playhead" style="left:0"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- how it works -->
+    <section id="how" class="reveal">
+      <span class="kicker" data-i18n="how.kicker">How it works</span>
+      <h2 data-i18n="how.title">Play. That's the whole setup.</h2>
+      <p class="sub" data-i18n="how.sub">Frag sits in your tray and does the boring part while you play.</p>
+      <div class="steps">
+        <div class="step">
+          <span class="tag rec">● REC 12:41</span>
+          <h3 data-i18n="how.s1.t">It records</h3>
+          <p data-i18n="how.s1.p">Frag watches Valorant. When the game loads, OBS starts recording. Back in the menus, it stops. Nothing to press.</p>
+        </div>
+        <div class="step">
+          <span class="tag">HenrikDev · 1 match</span>
+          <h3 data-i18n="how.s2.t">It links</h3>
+          <p data-i18n="how.s2.p">The recording is matched to its game. Kills, deaths, plants and rounds land on the timeline, synced to the frame.</p>
+        </div>
+        <div class="step">
+          <span class="tag">C · I · O · E</span>
+          <h3 data-i18n="how.s3.t">You clip</h3>
+          <p data-i18n="how.s3.p">Jump from kill to kill, press C on the good ones, export. Or let Frag cut every 3K, ace and clutch for you.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- features -->
+    <section id="features" class="reveal">
+      <span class="kicker" data-i18n="feat.kicker">Features</span>
+      <h2 data-i18n="feat.title">Everything after the game.</h2>
+      <div class="features">
+        <div class="card wide">
+          <h3 data-i18n="feat.rec.t">Auto-record with OBS</h3>
+          <p data-i18n="feat.rec.p">Starts at agent select or when the game loads, stops a few seconds after. Recordings get renamed: map, mode, score. If Valorant opens without OBS, you get a notification and one click starts it.</p>
+          <div class="viz v-obs"><span>Valorant</span><span class="arrow">→</span><span class="rec"><i></i>REC</span><span class="arrow">→</span><span>Ascent · Competitive · 13-9.mp4</span></div>
+        </div>
+        <div class="card wide">
+          <h3 data-i18n="feat.match.t">Knows your match</h3>
+          <p data-i18n="feat.match.p">Every recording is linked to its game through the HenrikDev API, then synced by reading the killfeed. Scoreboard, rounds and your kills, right next to the video.</p>
+          <div class="viz v-match"><span class="map"></span><div><b>Ascent · Jett</b><span>24 / 12 / 5 · Diamond 2</span></div><span class="score">13–9</span></div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="feat.export.t">Fast exports</h3>
+          <p data-i18n="feat.export.p">Frame-accurate cuts on your Nvidia GPU, or instant lossless ones. Keep audio tracks split, or mix them for Discord.</p>
+          <div class="viz v-export">
+            <div><span class="tagp">NVENC</span><span class="bar"><i style="width:100%"></i></span><span>R7 · 3K</span></div>
+            <div><span class="tagp">NVENC</span><span class="bar"><i style="width:64%"></i></span><span>R12 · ACE</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="feat.review.t">Review your deaths</h3>
+          <p data-i18n="feat.review.p">Playlists of your deaths, first deaths, untraded deaths and lost clutches. Tag what went wrong.</p>
+          <div class="viz v-review"><span class="on" data-i18n="tag.peek">Dry peek</span><span data-i18n="tag.pos">Bad positioning</span><span class="on" data-i18n="tag.util">No utility</span><span class="good" data-i18n="tag.good">Well played</span></div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="feat.stats.t">Stats that matter</h3>
+          <p data-i18n="feat.stats.p">K/D game by game, ADR, opening duels, clutches, by agent and by map, plus your most common mistakes.</p>
+          <div class="viz">
+            <svg class="v-kd" viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="0" x2="300" y1="45" y2="45" stroke="rgba(237,237,237,.18)" stroke-dasharray="3 4"/>
+              <polyline fill="none" stroke="#ededed" stroke-width="2" points="5,58 40,40 75,62 110,35 145,48 180,26 215,38 250,20 295,30"/>
+              <polyline fill="none" stroke="#ff4655" stroke-width="2" stroke-opacity=".6" points="5,58 40,50 75,53 110,48 145,46 180,40 215,38 250,33 295,30"/>
+              <g fill="#4cc38a"><circle cx="40" cy="40" r="4"/><circle cx="110" cy="35" r="4"/><circle cx="180" cy="26" r="4"/><circle cx="250" cy="20" r="4"/><circle cx="295" cy="30" r="4"/></g>
+              <g fill="#ff4655"><circle cx="5" cy="58" r="4"/><circle cx="75" cy="62" r="4"/><circle cx="145" cy="48" r="4"/><circle cx="215" cy="38" r="4"/></g>
+            </svg>
+          </div>
+        </div>
+        <div class="card wide">
+          <h3 data-i18n="feat.montage.t">Montages in a minute</h3>
+          <p data-i18n="feat.montage.p">Pick clips from any game, put them in order, add a title card and a fade. One export.</p>
+          <div class="viz v-card"><div class="slab"><b>Ace</b><i>Ascent · Jett · R12</i></div></div>
+        </div>
+        <div class="card wide">
+          <h3 data-i18n="feat.bg.t">Stays out of the way</h3>
+          <p data-i18n="feat.bg.p">Close the window and Frag keeps running in the tray, with a red dot while it records. It starts with Windows if you want, and updates itself.</p>
+          <div class="viz v-tray">
+            <div class="menu">
+              <span data-i18n="tray.open">Open Frag</span>
+              <span class="dis">● <span data-i18n="tray.rec">Recording</span> · 12:41</span>
+              <span data-i18n="tray.recs">Open recordings folder</span>
+              <span data-i18n="tray.quit">Quit</span>
+            </div>
+            <div class="bar"><i></i><i></i><b><svg viewBox="0 0 24 24"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg></b><em>12:41</em></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- shortcuts -->
+    <section class="reveal">
+      <span class="kicker" data-i18n="keys.kicker">Keyboard first</span>
+      <h2 data-i18n="keys.title">Your hands never leave the keys.</h2>
+      <div class="keys">
+        <span class="key"><kbd>C</kbd><span data-i18n="keys.c">Clip the last 10 s</span></span>
+        <span class="key"><kbd>N</kbd><span data-i18n="keys.n">Next kill</span></span>
+        <span class="key"><kbd>I</kbd><kbd>O</kbd><span data-i18n="keys.io">Set start / end</span></span>
+        <span class="key"><kbd>J</kbd><kbd>L</kbd><span>± 5 s</span></span>
+        <span class="key"><kbd>M</kbd><span data-i18n="keys.m">Drop a marker</span></span>
+        <span class="key"><kbd>E</kbd><span data-i18n="keys.e">Export</span></span>
+      </div>
+    </section>
+
+    <!-- privacy -->
+    <section class="reveal">
+      <div class="privacy">
+        <div>
+          <span class="kicker" data-i18n="priv.kicker">Privacy</span>
+          <h2 data-i18n="priv.title">Your games stay on your PC.</h2>
+          <p class="sub" data-i18n="priv.sub">No account, no cloud, no tracking. Frag only talks to the internet for match data, game images and updates.</p>
+        </div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg><span data-i18n-html="priv.1"><b>Local files.</b> Clips, notes and settings live in your AppData folder.</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg><span data-i18n-html="priv.2"><b>Encrypted secrets.</b> Your HenrikDev key and OBS password are stored with Windows encryption.</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg><span data-i18n-html="priv.3"><b>Hands off the game.</b> Frag reads the Riot client's local status, the same one Discord uses. It never touches the game itself.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- faq -->
+    <section id="faq" class="reveal">
+      <span class="kicker">FAQ</span>
+      <h2 data-i18n="faq.title">Questions</h2>
+      <div class="faq">
+        <details><summary data-i18n="faq.q1">Windows says it protected my PC. Is that normal?</summary><p data-i18n-html="faq.a1">Yes. Frag isn't code-signed yet, so SmartScreen warns about it. Click <b>More info</b>, then <b>Run anyway</b>. The installer comes straight from the GitHub releases of this project.</p></details>
+        <details><summary data-i18n="faq.q2">Do I need OBS?</summary><p data-i18n="faq.a2">Only for auto-record. You can also drop any recording into Frag and clip it by hand. For auto-record, turn on OBS's WebSocket server (Tools → WebSocket Server Settings) and paste its password into Frag.</p></details>
+        <details><summary data-i18n="faq.q3">What's the HenrikDev key for?</summary><p data-i18n="faq.a3">It's how Frag gets your match data: kills, rounds, scoreboard. The key is free at api.henrikdev.xyz. Without it you can still record, clip and export.</p></details>
+        <details><summary data-i18n="faq.q4">My keyboard is AZERTY.</summary><p data-i18n-html="faq.a4">Switch the keyboard layout in Settings. Letter shortcuts work everywhere, and the symbol ones follow your layout (<code>à</code> to fit the timeline, <code>;</code> for next).</p></details>
+        <details><summary data-i18n="faq.q5">Does it cost anything?</summary><p data-i18n="faq.a5">No. Frag is free.</p></details>
+      </div>
+    </section>
+
+    <div class="final reveal">
+      <h2 data-i18n="final.title">Your next clip is one key away.</h2>
+      <p data-i18n="final.sub">Install Frag, play a game, come back to a recording that's already linked.</p>
+      <div class="cta">
+        <a class="btn btn-primary js-download" href="https://github.com/delusionallov3/frag/releases/latest"><span data-i18n="hero.download">Download for Windows</span> <small class="js-size"></small></a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <a class="brand" href="#top" style="font-size:20px"><svg viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg>FRAG</a>
+      <nav>
+        <a href="https://github.com/delusionallov3/frag">GitHub</a>
+        <a href="https://github.com/delusionallov3/frag/releases" data-i18n="foot.releases">Releases</a>
+        <a href="https://github.com/delusionallov3/frag/issues" data-i18n="foot.issues">Report a bug</a>
+      </nav>
+    </div>
+    <p class="legal" data-i18n="foot.legal">Frag isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  /* ------------------------------------------------------------ translations */
+  const FR = {
+    'nav.how': 'Comment ça marche', 'nav.features': 'Fonctionnalités', 'nav.download': 'Télécharger',
+    'hero.eyebrow': 'Gratuit pour Windows',
+    'hero.title': 'Clippe tes games Valorant. <em>Vite.</em>',
+    'hero.lede': 'Frag enregistre tes games avec OBS, relie chaque rec à son match et place chaque kill sur la timeline. Appuie sur C, ton clip est fait.',
+    'hero.download': 'Télécharger pour Windows', 'hero.source': 'Voir sur GitHub',
+    'hero.note': 'Windows 10 / 11 · se met à jour tout seul · anglais & français',
+    'demo.synced': 'Calé sur le killfeed', 'demo.clip': 'Clip des 10 dernières secondes', 'demo.review': 'Revoir', 'demo.export': 'Exporter · NVENC',
+    'how.kicker': 'Comment ça marche', 'how.title': 'Joue. C’est tout le réglage.',
+    'how.sub': 'Frag reste dans la zone de notification et fait la partie chiante pendant que tu joues.',
+    'how.s1.t': 'Il enregistre', 'how.s1.p': 'Frag surveille Valorant. Quand la game charge, OBS lance l’enregistrement. De retour au menu, il s’arrête. Rien à faire.',
+    'how.s2.t': 'Il relie', 'how.s2.p': 'La rec est liée à sa game. Kills, morts, plants et rounds arrivent sur la timeline, calés à l’image près.',
+    'how.s3.t': 'Tu clippes', 'how.s3.p': 'Saute de kill en kill, appuie sur C sur les bons, exporte. Ou laisse Frag couper chaque 3K, ace et clutch pour toi.',
+    'feat.kicker': 'Fonctionnalités', 'feat.title': 'Tout ce qui vient après la game.',
+    'feat.rec.t': 'Enregistrement auto avec OBS', 'feat.rec.p': 'Démarre à la sélection d’agent ou au chargement de la game, s’arrête quelques secondes après. Les recs sont renommées : map, mode, score. Si Valorant s’ouvre sans OBS, une notif te prévient et un clic le lance.',
+    'feat.match.t': 'Il connaît ton match', 'feat.match.p': 'Chaque rec est liée à sa game via l’API HenrikDev, puis calée en lisant le killfeed. Tableau des scores, rounds et tes kills, juste à côté de la vidéo.',
+    'feat.export.t': 'Exports rapides', 'feat.export.p': 'Coupes à l’image près sur ta carte Nvidia, ou instantanées sans perte. Pistes audio séparées, ou mixées pour Discord.',
+    'feat.review.t': 'Revois tes morts', 'feat.review.p': 'Des playlists de tes morts, premières morts, morts non tradées et clutchs ratés. Tague ce qui a coincé.',
+    'tag.peek': 'Peek seul', 'tag.pos': 'Mauvais placement', 'tag.util': 'Pas d’utilitaire', 'tag.good': 'Bien joué',
+    'feat.stats.t': 'Des stats utiles', 'feat.stats.p': 'K/D game après game, ADR, duels d’ouverture, clutchs, par agent et par map, plus tes erreurs les plus fréquentes.',
+    'feat.montage.t': 'Un montage en une minute', 'feat.montage.p': 'Choisis des clips de n’importe quelle game, mets-les dans l’ordre, ajoute un carton titre et un fondu. Un seul export.',
+    'feat.bg.t': 'Il se fait oublier', 'feat.bg.p': 'Ferme la fenêtre, Frag continue dans la zone de notification, avec un point rouge quand il enregistre. Il démarre avec Windows si tu veux, et se met à jour tout seul.',
+    'tray.open': 'Ouvrir Frag', 'tray.rec': 'Rec en cours', 'tray.recs': 'Ouvrir le dossier des recs', 'tray.quit': 'Quitter',
+    'keys.kicker': 'Au clavier', 'keys.title': 'Tes mains ne quittent jamais le clavier.',
+    'keys.c': 'Clip des 10 dernières s', 'keys.n': 'Kill suivant', 'keys.io': 'Début / fin', 'keys.m': 'Poser un marqueur', 'keys.e': 'Exporter',
+    'priv.kicker': 'Vie privée', 'priv.title': 'Tes games restent sur ton PC.',
+    'priv.sub': 'Pas de compte, pas de cloud, pas de pistage. Frag ne va sur internet que pour les données de match, les images du jeu et les mises à jour.',
+    'priv.1': '<b>Fichiers locaux.</b> Clips, notes et réglages restent dans ton dossier AppData.',
+    'priv.2': '<b>Secrets chiffrés.</b> Ta clé HenrikDev et ton mot de passe OBS sont chiffrés par Windows.',
+    'priv.3': '<b>Pas touche au jeu.</b> Frag lit l’état local du client Riot, le même que Discord. Il ne touche jamais au jeu lui-même.',
+    'faq.title': 'Questions',
+    'faq.q1': 'Windows dit qu’il a protégé mon PC. C’est normal ?',
+    'faq.a1': 'Oui. Frag n’est pas encore signé, donc SmartScreen prévient. Clique sur <b>Informations complémentaires</b>, puis <b>Exécuter quand même</b>. L’installeur vient directement des releases GitHub du projet.',
+    'faq.q2': 'Il me faut OBS ?', 'faq.a2': 'Seulement pour l’enregistrement auto. Tu peux aussi glisser n’importe quelle vidéo dans Frag et la clipper à la main. Pour l’enregistrement auto, active le serveur WebSocket d’OBS (Outils → Paramètres du serveur WebSocket) et colle son mot de passe dans Frag.',
+    'faq.q3': 'À quoi sert la clé HenrikDev ?', 'faq.a3': 'C’est comme ça que Frag récupère les données de ton match : kills, rounds, tableau des scores. La clé est gratuite sur api.henrikdev.xyz. Sans elle, tu peux quand même enregistrer, clipper et exporter.',
+    'faq.q4': 'Mon clavier est en AZERTY.', 'faq.a4': 'Change la disposition du clavier dans les réglages. Les raccourcis à lettres marchent partout, et ceux à symboles suivent ton clavier (<code>à</code> pour tout afficher, <code>;</code> pour suivant).',
+    'faq.q5': 'C’est payant ?', 'faq.a5': 'Non. Frag est gratuit.',
+    'final.title': 'Ton prochain clip est à une touche.', 'final.sub': 'Installe Frag, joue une game, reviens sur une rec déjà liée.',
+    'foot.releases': 'Versions', 'foot.issues': 'Signaler un bug',
+    'foot.legal': 'Frag n’est pas approuvé par Riot Games et ne reflète pas les opinions de Riot Games ni de quiconque officiellement impliqué dans la production ou la gestion des propriétés de Riot Games. Riot Games et toutes les propriétés associées sont des marques commerciales ou déposées de Riot Games, Inc.'
+  }
+  const EN = {}
+  document.querySelectorAll('[data-i18n]').forEach((el) => (EN[el.dataset.i18n] = el.textContent))
+  document.querySelectorAll('[data-i18n-html]').forEach((el) => (EN[el.dataset.i18nHtml] = el.innerHTML))
+  let lang = 'en'
+  const setLang = (l) => {
+    lang = l === 'fr' ? 'fr' : 'en'
+    const dict = lang === 'fr' ? FR : EN
+    document.documentElement.lang = lang
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const v = dict[el.dataset.i18n] ?? EN[el.dataset.i18n]
+      if (v !== undefined) el.textContent = v
+    })
+    document.querySelectorAll('[data-i18n-html]').forEach((el) => {
+      const v = dict[el.dataset.i18nHtml] ?? EN[el.dataset.i18nHtml]
+      if (v !== undefined) el.innerHTML = v
+    })
+    document.querySelectorAll('.lang button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang))
+    try { localStorage.setItem('frag.lang', lang) } catch {}
+    if (typeof renderSize === 'function') renderSize()
+  }
+  document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)))
+  let saved = null
+  try { saved = localStorage.getItem('frag.lang') } catch {}
+  if (saved === 'fr') setLang('fr')
+
+  /* ------------------------------------------------------------ latest release */
+  var sizeInfo = null // var: renderSize() can run before this line (saved language)
+  function renderSize() {
+    if (!sizeInfo) return
+    const unit = lang === 'fr' ? 'Mo' : 'MB'
+    document.querySelectorAll('.js-size').forEach((el) => (el.textContent = `${sizeInfo.tag} · ${sizeInfo.mb} ${unit}`))
+  }
+  fetch('https://api.github.com/repos/delusionallov3/frag/releases/latest')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((rel) => {
+      if (!rel) return
+      document.querySelectorAll('.js-version').forEach((el) => (el.textContent = rel.tag_name))
+      const exe = (rel.assets || []).find((a) => /\.exe$/i.test(a.name))
+      if (!exe) return
+      document.querySelectorAll('.js-download').forEach((a) => (a.href = exe.browser_download_url))
+      sizeInfo = { tag: rel.tag_name, mb: Math.round(exe.size / 1e6) }
+      renderSize()
+    })
+    .catch(() => {})
+
+  /* ------------------------------------------------------------ reveal on scroll */
+  const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add('in'), io.unobserve(e.target))), { threshold: 0.12 })
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
+
+  /* ------------------------------------------------------------ editor demo */
+  const $ = (s) => document.querySelector(s)
+  const ruler = $('.js-ruler')
+  for (let i = 1; i <= 7; i++) {
+    const s = document.createElement('span')
+    s.style.left = `${i * 12.5}%`
+    s.textContent = `${12 + Math.floor(i / 2)}:${i % 2 ? '30' : '00'}`
+    ruler.appendChild(s)
+  }
+  // waveform
+  const wave = $('.js-wave')
+  let path = ''
+  for (let i = 0; i < 200; i++) {
+    const h = 3 + Math.abs(Math.sin(i * 0.23) * 8 + Math.sin(i * 0.071) * 5) + ((i * 7919) % 5)
+    path += `<rect x="${i * 2}" y="${(26 - Math.min(h, 24)) / 2}" width="1" height="${Math.min(h, 24)}" fill="#4b4b51"/>`
+  }
+  wave.innerHTML = path
+
+  // events on the match track (position 0..1)
+  const EVENTS = [
+    { t: 0.1, kind: 'kill', who: 'You', victim: 'Sova', gun: 'Sheriff' },
+    { t: 0.15, kind: 'kill', who: 'You', victim: 'Killjoy', gun: 'Sheriff' },
+    { t: 0.31, kind: 'death', who: 'Raze', victim: 'You', gun: 'Odin' },
+    { t: 0.42, kind: 'plant' },
+    { t: 0.56, kind: 'kill', who: 'You', victim: 'Jett', gun: 'Vandal' },
+    { t: 0.61, kind: 'kill', who: 'You', victim: 'Omen', gun: 'Vandal' },
+    { t: 0.66, kind: 'kill', who: 'You', victim: 'Sage', gun: 'Vandal' },
+    { t: 0.84, kind: 'kill', who: 'Skye', victim: 'Chamber', gun: 'Phantom' }
+  ]
+  const track = $('.js-kills')
+  EVENTS.forEach((e) => {
+    const d = document.createElement('i')
+    d.className = `kill ${e.kind === 'death' ? 'death' : e.kind === 'plant' ? 'plant' : ''}`
+    d.style.left = `${e.t * 100}%`
+    track.appendChild(d)
+    e.el = d
+  })
+
+  const feed = $('.js-feed')
+  const playhead = $('.js-playhead')
+  const key = $('.js-key')
+  const newClip = $('.js-newclip')
+  const clipList = $('.js-cliplist')
+  const exBar = $('.js-exbar')
+  const ally = $('.js-ally')
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const LOOP = 11000
+  const CLIP_AT = 0.69
+  const you = () => (lang === 'fr' ? 'Toi' : 'You')
+
+  const pushFeed = (e) => {
+    const row = document.createElement('div')
+    const name = (n) => (n === 'You' ? you() : n)
+    row.className = `kf ${e.who === 'You' ? 'mine' : e.victim === 'You' ? 'dead' : ''}`
+    row.innerHTML = `<span>${name(e.who)}</span><span class="gun">${e.gun}</span><span>${name(e.victim)}</span>`
+    feed.prepend(row)
+    while (feed.children.length > 4) feed.lastChild.remove()
+  }
+
+  let last = -1
+  let clipped = false
+  const reset = () => {
+    feed.innerHTML = ''
+    EVENTS.forEach((e) => e.el.classList.remove('hit'))
+    newClip.classList.remove('show')
+    clipList.innerHTML = ''
+    exBar.style.transition = 'none'
+    exBar.style.width = '0'
+    key.classList.remove('show')
+    ally.textContent = '6'
+    clipped = false
+  }
+
+  const showClip = () => {
+    clipped = true
+    key.classList.add('show')
+    newClip.classList.add('show')
+    setTimeout(() => key.classList.remove('show'), 1300)
+    const row = document.createElement('div')
+    row.className = 'clip-row sel'
+    row.innerHTML = '<span class="n">2</span><span class="name">R7 · 3K · Vandal</span><span class="len">10.0 s</span>'
+    clipList.appendChild(row)
+    setTimeout(() => {
+      exBar.style.transition = 'width 1.6s linear'
+      exBar.style.width = '100%'
+    }, 900)
+  }
+
+  if (reduce) {
+    playhead.style.left = `${CLIP_AT * 100}%`
+    EVENTS.filter((e) => e.t <= CLIP_AT && e.who).forEach(pushFeed)
+    EVENTS.forEach((e) => e.t <= CLIP_AT && e.el.classList.add('hit'))
+    newClip.classList.add('show')
+    clipList.innerHTML = '<div class="clip-row sel"><span class="n">2</span><span class="name">R7 · 3K · Vandal</span><span class="len">10.0 s</span></div>'
+    return
+  }
+
+  const start = performance.now()
+  const frame = (now) => {
+    const t = ((now - start) % LOOP) / LOOP
+    if (t < last) reset()
+    playhead.style.left = `${t * 100}%`
+    EVENTS.forEach((e) => {
+      if (e.t > last && e.t <= t) {
+        e.el.classList.add('hit')
+        if (e.who) pushFeed(e)
+        if (e.t === 0.66) ally.textContent = '7'
+      }
+    })
+    if (!clipped && t >= CLIP_AT) showClip()
+    last = t
+    requestAnimationFrame(frame)
+  }
+  requestAnimationFrame(frame)
+})()
+</script>
+</body>
+</html>
