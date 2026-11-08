@@ -1,5 +1,5 @@
 import { tr } from '@shared/i18n'
-import { promises as fs } from 'fs'
+import { existsSync, promises as fs } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import type { CardLayer, MontageItem, MontageOptions, MotionOptions } from '@shared/types'
@@ -189,7 +189,24 @@ function clipAudio(src: number, tracks: number, audio: CutArgs['audio'], d: numb
   return `[${src}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS,${fades}[${label}]`
 }
 
-type Seg = { kind: 'intro' | 'lobby'; dur: number; file: string } | { kind: 'clip'; dur: number; item: MontageItem; i: number }
+/** Slow motion on the last kill of an ace or a clutch: this window around it plays at half speed */
+const SLOW_BEFORE = 0.7
+const SLOW_AFTER = 0.5
+const SLOW = 2
+
+/** where a clip slows down (clip time), or null */
+function slowWindow(item: MontageItem, dur: number): { a: number; b: number } | null {
+  const m = item.motion
+  if (!m || !m.kills.length || !(m.label === 'ACE' || m.clutch)) return null
+  const last = Math.max(...m.kills)
+  const a = Math.max(0, last - SLOW_BEFORE)
+  const b = Math.min(dur, last + SLOW_AFTER)
+  return b - a >= 0.3 ? { a, b } : null
+}
+
+type Seg =
+  | { kind: 'intro' | 'lobby'; dur: number; file: string }
+  | { kind: 'clip'; dur: number; src: number; item: MontageItem; i: number; slow: { a: number; b: number } | null }
 
 /**
  * Optional match intro and scoreboard, then the highlights with hard cuts hidden under a wipe that names
@@ -218,7 +235,14 @@ async function planMotion(
   const segs: Seg[] = []
   if (intro && mo.intro) segs.push({ kind: 'intro', dur: INTRO, file: join(tmp, 'intro.mov') })
   if (intro && mo.lobby === 'intro' && intro.players.length) segs.push({ kind: 'lobby', dur: LOBBY, file: join(tmp, 'lobby.mov') })
-  items.forEach((item, i) => segs.push({ kind: 'clip', dur: Math.max(0.6, item.end - item.start), item, i }))
+  items.forEach((item, i) => {
+    const src = Math.max(0.6, item.end - item.start)
+    const slow = mo.slowmo ? slowWindow(item, src) : null
+    // the slowed window lasts SLOW times longer; kill times after it move on
+    const at = (t: number): number => (!slow || t <= slow.a ? t : t < slow.b ? slow.a + (t - slow.a) * SLOW : t + (slow.b - slow.a) * (SLOW - 1))
+    const shown = item.motion ? { ...item.motion, kills: item.motion.kills.map(at) } : null
+    segs.push({ kind: 'clip', dur: at(src), src, item: { ...item, motion: shown }, i, slow })
+  })
   if (intro && mo.lobby === 'outro' && intro.players.length) segs.push({ kind: 'lobby', dur: LOBBY, file: join(tmp, 'lobby.mov') })
   const total = segs.reduce((a, s) => a + s.dur, 0)
 
@@ -281,13 +305,23 @@ async function planMotion(
         chain.push(`[sv${j}][sa${j}]`)
         return
       }
-      const { item, i, dur } = s
+      const { item, i, dur, slow } = s
       const src = nextInput()
-      inputs.push('-ss', item.start.toFixed(3), '-t', dur.toFixed(3), '-i', item.videoPath)
+      inputs.push('-ss', item.start.toFixed(3), '-t', s.src.toFixed(3), '-i', item.videoPath)
       const kills = PUNCH[mo.punch] ? (item.motion?.kills ?? []).filter((k) => k >= 0 && k < dur) : []
       const z = kills.map((k) => `${PUNCH[mo.punch]}*exp(-(it-${k.toFixed(3)})*7)*gte(it\\,${k.toFixed(3)})`).join('+')
       const punch = z ? `,zoompan=z='1+${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS}` : ''
-      parts.push(`[${src}:v:0]settb=AVTB,setpts=PTS-STARTPTS,${norm}${punch},format=yuv420p[c${j}]`)
+      if (slow) {
+        // normal, half speed (frames held: no blending), normal
+        const { a, b } = slow
+        parts.push(`[${src}:v:0]settb=AVTB,setpts=PTS-STARTPTS,${norm},split=3[s${j}a][s${j}b][s${j}c]`)
+        parts.push(`[s${j}a]trim=0:${a.toFixed(3)},setpts=PTS-STARTPTS[s${j}a1]`)
+        parts.push(`[s${j}b]trim=${a.toFixed(3)}:${b.toFixed(3)},setpts=(PTS-STARTPTS)*${SLOW},fps=${FPS}[s${j}b1]`)
+        parts.push(`[s${j}c]trim=${b.toFixed(3)},setpts=PTS-STARTPTS[s${j}c1]`)
+        parts.push(`[s${j}a1][s${j}b1][s${j}c1]concat=n=3:v=1:a=0,settb=AVTB,setpts=PTS-STARTPTS${punch},format=yuv420p[c${j}]`)
+      } else {
+        parts.push(`[${src}:v:0]settb=AVTB,setpts=PTS-STARTPTS,${norm}${punch},format=yuv420p[c${j}]`)
+      }
       let v = `c${j}`
       const lo = lowers.get(i)
       if (lo) {
@@ -297,11 +331,33 @@ async function planMotion(
         parts.push(`[${v}][lo${j}]overlay=0:0:eof_action=pass:repeatlast=0:format=auto,format=yuv420p[cl${j}]`)
         v = `cl${j}`
       }
-      parts.push(clipAudio(src, metas[i].audioTracks, audio, dur, `sa${j}`))
+      if (slow) {
+        // the slowed part of the sound drops an octave, like a film's slow motion
+        const { a, b } = slow
+        parts.push(clipAudio(src, metas[i].audioTracks, audio, s.src, `sr${j}`))
+        parts.push(`[sr${j}]asplit=3[r${j}a][r${j}b][r${j}c]`)
+        parts.push(`[r${j}a]atrim=0:${a.toFixed(3)},asetpts=PTS-STARTPTS[r${j}a1]`)
+        parts.push(`[r${j}b]atrim=${a.toFixed(3)}:${b.toFixed(3)},asetpts=PTS-STARTPTS,asetrate=${48000 / SLOW},aresample=48000[r${j}b1]`)
+        parts.push(`[r${j}c]atrim=${b.toFixed(3)},asetpts=PTS-STARTPTS[r${j}c1]`)
+        parts.push(`[r${j}a1][r${j}b1][r${j}c1]concat=n=3:v=0:a=1[sa${j}]`)
+      } else {
+        parts.push(clipAudio(src, metas[i].audioTracks, audio, dur, `sa${j}`))
+      }
       chain.push(`[${v}][sa${j}]`)
     })
 
-    parts.push(`${chain.join('')}concat=n=${chain.length}:v=1:a=1[vcat][aout]`)
+    const music = mo.music && existsSync(mo.music) ? mo.music : null
+    parts.push(`${chain.join('')}concat=n=${chain.length}:v=1:a=1[vcat][${music ? 'agame' : 'aout'}]`)
+    if (music) {
+      // the track loops under the whole montage, fades in and out, and ducks when the game is loud
+      const k = nextInput()
+      inputs.push('-stream_loop', '-1', '-i', music)
+      const vol = Math.max(0, Math.min(1, mo.musicVolume)).toFixed(2)
+      parts.push(`[${k}:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=0:${total.toFixed(3)},asetpts=PTS-STARTPTS,volume=${vol},afade=t=in:d=1.2,afade=t=out:st=${Math.max(0, total - 2.5).toFixed(3)}:d=2.5[mus]`)
+      parts.push(`[agame]asplit=2[ag1][ag2]`)
+      parts.push(`[mus][ag2]sidechaincompress=threshold=0.04:ratio=8:attack=15:release=350[musd]`)
+      parts.push(`[ag1][musd]amix=inputs=2:duration=first:normalize=0[aout]`)
+    }
     let v = 'vcat'
     wipes.forEach((w, j) => {
       const k = nextInput()

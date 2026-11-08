@@ -10,7 +10,10 @@ export const DEFAULT_MOTION: MotionOptions = {
   lowerThirds: true,
   scoreBug: true,
   wipeLabels: true,
-  punch: 'soft'
+  punch: 'soft',
+  slowmo: true,
+  music: null,
+  musicVolume: 0.6
 }
 
 /** Accent colours offered in the recap window */

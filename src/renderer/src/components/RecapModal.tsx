@@ -8,7 +8,7 @@ import type { MatchLink, MotionOptions, MotionStyle } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { MOTION_ACCENTS, MOTION_STYLES, MOTION_TIMES } from '@shared/motion'
 import { useApp } from '../store'
-import { mediaUrl, fmtClipLen } from '../lib/format'
+import { baseName, mediaUrl, fmtClipLen } from '../lib/format'
 import type { AutoClipOptions, RoundInfo } from '../lib/match'
 import { introFor, readMotion, recapItems, writeMotion } from '../lib/recap'
 import { Clapperboard } from '../lib/icons'
@@ -153,7 +153,7 @@ export default function RecapModal({
   }
 
   if (!open) return null
-  const toggle = (k: 'intro' | 'lowerThirds' | 'scoreBug' | 'wipeLabels' | 'names', label: string): JSX.Element => (
+  const toggle = (k: 'intro' | 'lowerThirds' | 'scoreBug' | 'wipeLabels' | 'names' | 'slowmo', label: string): JSX.Element => (
     <label className="toggle">
       <input type="checkbox" checked={m[k]} onChange={(e) => update({ [k]: e.target.checked })} />
       <span />
@@ -219,7 +219,33 @@ export default function RecapModal({
               {toggle('scoreBug', tr('Round and score', 'Round et score'))}
               {toggle('wipeLabels', tr('Round on transitions', 'Round sur les transitions'))}
               {toggle('names', tr('Player names', 'Pseudos des joueurs'))}
+              {toggle('slowmo', tr('Slow motion on the last kill (ace, clutch)', 'Ralenti sur le dernier kill (ace, clutch)'))}
             </div>
+          </div>
+
+          <div className="field">
+            <label>{tr('Music', 'Musique')}</label>
+            {m.music ? (
+              <div className="rc-music">
+                <span title={m.music}>{baseName(m.music)}</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={m.musicVolume}
+                  onChange={(e) => update({ musicVolume: Number(e.target.value) })}
+                  aria-label={tr('Music volume', 'Volume de la musique')}
+                />
+                <button className="link-btn" onClick={() => update({ music: null })}>
+                  {tr('Remove', 'Retirer')}
+                </button>
+              </div>
+            ) : (
+              <button className="btn btn-ghost btn-block" onClick={() => void window.frag.pickMusic().then((f) => f && update({ music: f }))}>
+                {tr('Choose a track… (lowered under the game sound)', 'Choisir un morceau… (baissé sous le son du jeu)')}
+              </button>
+            )}
           </div>
 
           <div className="field">
