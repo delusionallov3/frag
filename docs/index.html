@@ -390,10 +390,44 @@
     .tour .fx-ui:not([hidden]), .is-swapping, .rec__live i::after, .exp__row.is-run .exp__bar i { animation: none !important; }
     .exp__row.is-run .exp__bar i { width: var(--w) !important; }
   }
+
+  /* one icon library (Lucide) drawn from the sprite, one stroke */
+  svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.i-18 { width: 18px; height: 18px; }
+  .chev.i { width: 14px; height: 14px; stroke-width: 2; }
+  .ui-icon.i { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.75; }
+  .btn > svg.i { margin-right: -2px; }
+  @media (max-width: 379px) { .btn > svg.i { display: none; } }
+  .fact-link { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line-strong, rgb(237 237 237 / .25)); transition: text-decoration-color 160ms var(--ease-out); }
+  .fact-link:hover { text-decoration-color: currentColor; }
+  .nav__logo .frag-mark { width: 28px; height: 28px; margin-right: 10px; }
+  .fe__bar .frag-mark { width: 18px; height: 18px; }
+  .ui-win__crumb .frag-mark { width: 18px; height: 18px; margin-right: 2px; }
+  .toast .frag-mark { width: 32px; height: 32px; padding: 0; background: none; border-radius: 0; }
+  .tray__bar b { padding: 0; background: none; }
+  .tray__bar b .frag-mark { width: 20px; height: 20px; }
   .legal-note { max-width: 88ch; color: var(--muted); font-size: 13px; line-height: 1.55; }
 </style>
 </head>
 <body class="ic-dark">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="frag-tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#232325"/><stop offset="1" stop-color="#121213"/></linearGradient>
+    <symbol id="frag-logo" viewBox="0 0 24 24">
+      <rect x=".5" y=".5" width="23" height="23" rx="5.5" fill="url(#frag-tile)" stroke="#ededed" stroke-opacity=".1"/>
+      <g transform="translate(4.4 4.6) scale(.64)"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></g>
+    </symbol>
+    <!-- interface glyphs: Lucide (ISC), one stroke for all -->
+    <symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></symbol>
+  </defs>
+</svg>
 <!-- type: software (site-kind software): a free Windows app that records, links and clips Valorant games
      deal: hero split (--has ui), nav nav-mega, close close-word, footer footer-dark, rhythm surface-pairs,
            buttons solid, mark: the client's own F logo (dealt dots, replaced), ground sage,
@@ -406,10 +440,10 @@
 <header class="nav">
   <div class="wrap nav__bar">
     <a class="skip-link" href="#top" data-i18n="nav.skip">Skip to content</a>
-    <a class="nav__logo" href="#top" aria-label="Frag"><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg>Frag</a>
+    <a class="nav__logo" href="#top" aria-label="Frag"><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#frag-logo"/></svg>Frag</a>
     <nav class="nav__links" aria-label="Main">
       <div class="nav__item">
-        <a class="nav__link" href="#features"><span data-i18n="nav.features">Features</span> <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="nav__link" href="#features"><span data-i18n="nav.features">Features</span> <svg class="chev i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron"/></svg></a>
         <div class="nav__menu">
           <div class="wrap grid">
             <div class="menu-col span-3">
@@ -428,10 +462,10 @@
               <a href="#review"><span class="mi" data-i18n="menu.rev">Review</span><span data-i18n="menu.rev.s">Your deaths, tagged</span></a>
               <a href="#review"><span class="mi" data-i18n="menu.stats">Stats</span><span data-i18n="menu.stats.s">K/D, ADR and clutches</span></a>
             </div>
-            <a class="menu-card span-3" href="#keys">
+            <a class="menu-card span-3" href="https://github.com/delusionallov3/frag/releases/latest">
               <div class="panel"><div class="mc-keys" aria-hidden="true"><kbd class="cap">à</kbd><kbd class="cap">;</kbd><kbd class="cap">(</kbd><kbd class="cap">)</kbd></div></div>
-              <span class="t-card" data-i18n="menu.card">New in 0.3.0</span>
-              <span class="t-small muted" data-i18n="menu.card.s">An AZERTY layout for the shortcuts</span>
+              <span class="t-card" data-i18n="menu.card">What's new in 0.3.0</span>
+              <span class="t-small muted" data-i18n="menu.card.s">English by default, AZERTY shortcuts</span>
             </a>
           </div>
         </div>
@@ -448,8 +482,7 @@
       </div>
       <a class="btn btn--primary js-download" href="https://github.com/delusionallov3/frag/releases/latest"><span data-i18n="cta.download">Download for Windows</span></a>
     </div>
-    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
-      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu"><svg class="i i-18" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-menu"/></svg>
     </button>
   </div>
 </header>
@@ -461,11 +494,11 @@
         <h1 id="hero-h" data-i18n="hero.title">Valorant clips in one key</h1>
         <p class="hero__lead" data-i18n="hero.lead">Frag records your games with OBS, links each recording to its match and puts every kill on the timeline. Press C and the last 10 seconds are a clip.</p>
         <div class="btn-row">
-          <a class="btn btn--primary js-download" href="https://github.com/delusionallov3/frag/releases/latest"><span data-i18n="cta.download">Download for Windows</span><span class="btn__meta js-size"></span></a>
+          <a class="btn btn--primary js-download" href="https://github.com/delusionallov3/frag/releases/latest"><svg class="i i-18" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download"/></svg><span data-i18n="cta.download">Download for Windows</span><span class="btn__meta js-size"></span></a>
           <a class="btn btn--secondary" href="https://github.com/delusionallov3/frag" data-i18n="hero.source">See the code on GitHub</a>
         </div>
         <dl class="hero-facts">
-          <div><dt data-i18n="hero.f1">Version</dt><dd class="js-version">v0.3.0</dd></div>
+          <div><dt data-i18n="hero.f1">Version</dt><dd><a class="fact-link" href="https://github.com/delusionallov3/frag/releases/latest"><span class="js-version">v0.3.0</span> · <span data-i18n="hero.new">What's new</span></a></dd></div>
           <div><dt data-i18n="hero.f2">Runs on</dt><dd data-i18n="hero.f2v">Windows 10, 11</dd></div>
           <div><dt data-i18n="hero.f3">Price</dt><dd data-i18n="hero.f3v">Free</dd></div>
         </dl>
@@ -473,7 +506,7 @@
       <!-- Frag's editor, drawn as live HTML (no screenshot): the playhead runs over a round, the killfeed
            fills, C is pressed and the last 10 seconds become clip 2 -->
       <div class="hero__media ui fe span-6 start-7" role="img" aria-label="Frag's editor: a Valorant recording with every kill marked on the timeline. Pressing C turns the last 10 seconds into a clip." data-i18n-aria="hero.media">
-        <div class="fe__bar"><b><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg>Frag</b><span>Ascent · Competitive · 13–9</span><span class="fe__sync"><i></i><span data-i18n="demo.synced">Synced on killfeed</span></span></div>
+        <div class="fe__bar"><b><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#frag-logo"/></svg>Frag</b><span>Ascent · Competitive · 13–9</span><span class="fe__sync"><i></i><span data-i18n="demo.synced">Synced on killfeed</span></span></div>
         <div class="fe__player">
           <div class="fe__map"></div>
           <div class="fe__score"><span class="a js-ally">6</span><span class="b">4</span></div>
@@ -513,19 +546,19 @@
         <div class="app__pane app__pane--list">
           <div class="ui ui-panel ui-win" data-ui="window" data-open="Linking" data-work="Syncing" data-done="Linked">
             <div class="ui-win__bar">
-              <span class="ui-win__crumb"><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg><span data-i18n="app.lib">Library</span> <i>/</i> <b data-i18n="app.recs">Recordings</b></span>
+              <span class="ui-win__crumb"><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#frag-logo"/></svg><span data-i18n="app.lib">Library</span> <i>/</i> <b data-i18n="app.recs">Recordings</b></span>
               <span class="ui-spacer"></span>
-              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph" data-i18n="app.search">Search</span><span class="ui-kbd">/</span></span>
+              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><span class="ui-win__ph" data-i18n="app.search">Search</span><span class="ui-kbd">/</span></span>
             </div>
             <div class="ui-win__body">
               <nav class="ui-win__side" aria-hidden="true">
-                <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="m7 6.3 2.6 1.7L7 9.7z"/></svg><span data-i18n="app.recs">Recordings</span><em>24</em></span>
-                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M3 8h10M8 3v10"/></svg><span data-i18n="app.clips">Clips</span><em>41</em></span>
-                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M3 12.5V6M8 12.5V3.5M13 12.5V8.5"/></svg>Stats</span>
+                <span class="ui-win__nav is-on"><svg class="ui-icon i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-video"/></svg><span data-i18n="app.recs">Recordings</span><em>24</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"/></svg><span data-i18n="app.clips">Clips</span><em>41</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg>Stats</span>
                 <span class="ui-win__label" data-i18n="app.maps">Maps</span>
-                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Ascent</span>
-                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Lotus</span>
-                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Haven</span>
+                <span class="ui-win__nav"><svg class="ui-icon i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-map"/></svg>Ascent</span>
+                <span class="ui-win__nav"><svg class="ui-icon i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-map"/></svg>Lotus</span>
+                <span class="ui-win__nav"><svg class="ui-icon i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-map"/></svg>Haven</span>
               </nav>
               <div class="ui-win__main">
                 <div class="ui-win__cols" aria-hidden="true"><span data-i18n="app.agent">Agent</span><span data-i18n="app.game">Game</span><span data-i18n="app.status">Status</span><span data-i18n="app.age">Age</span></div>
@@ -734,9 +767,9 @@
         </div>
         <div class="frame frame--split frame--lit span-6 start-7" role="img" aria-label="A Windows notification from Frag saying the game is linked, above Frag's tray menu with Recording 12:41." data-i18n-aria="priv.aria">
           <div class="stage"><div class="ui fx-ui tray" aria-hidden="true">
-            <div class="fx-card toast"><svg class="frag-mark" viewBox="0 0 24 24"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg><b data-i18n="tray.t">Game linked</b><span data-i18n="tray.s">Ascent · 13–9 · 7 auto clips ready</span></div>
+            <div class="fx-card toast"><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#frag-logo"/></svg><b data-i18n="tray.t">Game linked</b><span data-i18n="tray.s">Ascent · 13–9 · 7 auto clips ready</span></div>
             <div class="fx-card tray__menu"><span data-i18n="tray.open">Open Frag</span><span class="is-dim"><span data-i18n="tray.rec">Recording</span> · 12:41</span><span data-i18n="tray.folder">Open recordings folder</span><span data-i18n="tray.quit">Quit</span></div>
-            <div class="tray__bar"><i></i><i></i><b><svg class="frag-mark" viewBox="0 0 24 24"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg></b><em>21:47</em></div>
+            <div class="tray__bar"><i></i><i></i><b><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#frag-logo"/></svg></b><em>21:47</em></div>
           </div></div>
         </div>
       </div>
@@ -756,7 +789,7 @@
     <div class="closing__links">
       <div class="grid">
         <div class="span-4 stack-4">
-          <a class="nav__logo" href="#top" aria-label="Frag"><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed"/><path d="M17 13h5l-1.5 7h-5z" fill="#ff4655"/></svg>Frag</a>
+          <a class="nav__logo" href="#top" aria-label="Frag"><svg class="frag-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#frag-logo"/></svg>Frag</a>
           <p class="footer__lede" data-i18n="foot.lede">Clips, reviews and stats for Valorant.</p>
         </div>
         <div class="span-2 footer__col"><h3 data-i18n="foot.app">The app</h3><ul><li><a href="#match" data-i18n="nav.match">Match</a></li><li><a href="#features" data-i18n="nav.features">Features</a></li><li><a href="#review" data-i18n="foot.review">Reviews</a></li><li><a href="#keys" data-i18n="nav.keys">Shortcuts</a></li></ul></div>
@@ -780,7 +813,7 @@
     'menu.g1': 'Enregistrer et relier', 'menu.rec': 'Enregistrement auto', 'menu.rec.s': 'OBS démarre et s’arrête tout seul', 'menu.match': 'Lien au match', 'menu.match.s': 'Chaque kill sur la timeline',
     'menu.g2': 'Clipper et exporter', 'menu.clip': 'Clips', 'menu.clip.s': 'C garde les 10 dernières secondes', 'menu.exp': 'Exports', 'menu.exp.s': 'Coupes NVENC ou sans perte', 'menu.mon': 'Montages', 'menu.mon.s': 'Des clips, un carton, un fichier',
     'menu.g3': 'Progresser', 'menu.rev': 'Revoir', 'menu.rev.s': 'Tes morts, taguées', 'menu.stats': 'Stats', 'menu.stats.s': 'K/D, ADR et clutchs',
-    'menu.card': 'Nouveau en 0.3.0', 'menu.card.s': 'Une disposition AZERTY pour les raccourcis',
+    'menu.card': 'Nouveautés de la 0.3.0', 'menu.card.s': 'Anglais par défaut, raccourcis AZERTY', 'hero.new': 'Nouveautés',
     'cta.download': 'Télécharger pour Windows',
     'hero.f1': 'Version', 'hero.f2': 'Tourne sur', 'hero.f2v': 'Windows 10, 11', 'hero.f3': 'Prix', 'hero.f3v': 'Gratuit',
     'hero.title': 'Tes clips Valorant en une touche',
