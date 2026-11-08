@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { X } from '../lib/icons'
 
 export default function Modal({
   open,

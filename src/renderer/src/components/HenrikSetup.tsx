@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, X, Loader2, ExternalLink, ShieldCheck, AlertTriangle, RefreshCw, Star, UserPlus } from 'lucide-react'
+import { Check, X, Loader2, ExternalLink, ShieldCheck, AlertTriangle, RefreshCw, Star, UserPlus } from '../lib/icons'
 import type { KeyTest, RateInfo, RiotAccount } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { useApp } from '../store'

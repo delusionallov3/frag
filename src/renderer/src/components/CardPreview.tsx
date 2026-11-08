@@ -1,6 +1,6 @@
 import { tr } from '@shared/i18n'
 import { useEffect, useRef, useState } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw } from '../lib/icons'
 import type { CardLayer, CardStyle } from '@shared/types'
 import { renderCard, type CardText } from '../lib/cards'
 import { mediaUrl } from '../lib/format'

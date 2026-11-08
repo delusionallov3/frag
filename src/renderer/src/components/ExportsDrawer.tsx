@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, FolderOpen, RotateCcw, Square, CheckCircle2, AlertCircle, Clock, Loader2, Ban } from 'lucide-react'
+import { X, FolderOpen, RotateCcw, Square, CheckCircle2, AlertCircle, Clock, Loader2, Ban } from '../lib/icons'
 import type { ExportJob } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { useApp } from '../store'

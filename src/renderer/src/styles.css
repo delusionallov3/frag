@@ -103,11 +103,10 @@ input {
   color: inherit;
 }
 
-/* All icons: one stroke, one size */
-svg.lucide {
+/* All icons (Phosphor, lib/icons.tsx): one weight, one size */
+svg.icon {
   width: 16px;
   height: 16px;
-  stroke-width: 1.5;
   flex: none;
 }
 
@@ -235,9 +234,9 @@ kbd {
   font-size: 15px;
 }
 .logo {
-  width: 20px;
-  height: 20px;
-  color: var(--text);
+  width: 22px;
+  height: 22px;
+  flex: none;
 }
 
 .crumb-sep {
@@ -404,7 +403,7 @@ kbd {
 .link-btn:hover {
   color: var(--text);
 }
-.link-btn svg.lucide {
+.link-btn svg.icon {
   width: 12px;
   height: 12px;
 }
@@ -437,7 +436,7 @@ kbd {
   background: var(--raised);
   border-color: var(--line-2);
 }
-.chip-btn svg.lucide {
+.chip-btn svg.icon {
   width: 14px;
   height: 14px;
 }
@@ -535,7 +534,7 @@ select.input optgroup {
   flex: 1;
   min-width: 0;
 }
-.select-wrap svg.lucide {
+.select-wrap svg.icon {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -563,7 +562,7 @@ select.input optgroup {
   border-color: var(--text);
   color: var(--page);
 }
-.check svg.lucide {
+.check svg.icon {
   width: 12px;
   height: 12px;
   stroke-width: 3;
@@ -696,7 +695,7 @@ select.input optgroup {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.folder-chip svg.lucide {
+.folder-chip svg.icon {
   width: 14px;
   height: 14px;
 }
@@ -956,7 +955,7 @@ select.input optgroup {
   font-size: 12px;
   color: var(--muted);
 }
-.mrow-clips svg.lucide {
+.mrow-clips svg.icon {
   width: 14px;
   height: 14px;
 }
@@ -996,7 +995,7 @@ select.input optgroup {
   justify-content: center;
   color: var(--muted);
 }
-.empty-icon svg.lucide {
+.empty-icon svg.icon {
   width: 24px;
   height: 24px;
 }
@@ -1100,7 +1099,7 @@ select.input optgroup {
   font-size: 12px;
   pointer-events: none;
 }
-.player-tag svg.lucide {
+.player-tag svg.icon {
   width: 14px;
   height: 14px;
   color: var(--muted);
@@ -1142,7 +1141,7 @@ select.input optgroup {
 .play-btn:active {
   transform: scale(0.96);
 }
-.play-btn svg.lucide {
+.play-btn svg.icon {
   width: 18px;
   height: 18px;
 }
@@ -1418,7 +1417,7 @@ select.input optgroup {
   min-width: 0;
   transition: color var(--fast) var(--ease);
 }
-.out-folder svg.lucide {
+.out-folder svg.icon {
   width: 14px;
   height: 14px;
 }
@@ -1854,7 +1853,7 @@ select.input optgroup {
 .mp-status.is-warn::before {
   background: var(--warn);
 }
-.mp-status svg.lucide {
+.mp-status svg.icon {
   display: none;
 }
 
@@ -1903,7 +1902,7 @@ select.input optgroup {
   border: 1px solid var(--line);
   color: var(--faint);
 }
-.mp-steps span svg.lucide {
+.mp-steps span svg.icon {
   width: 12px;
   height: 12px;
 }
@@ -1927,7 +1926,7 @@ select.input optgroup {
   font-size: 12px;
   line-height: 18px;
 }
-.mp-error svg.lucide {
+.mp-error svg.icon {
   width: 14px;
   height: 14px;
   margin-top: 2px;
@@ -2073,7 +2072,7 @@ select.input optgroup {
   font-size: 11px;
   transition: background-color var(--fast) var(--ease);
 }
-.mh-change svg.lucide {
+.mh-change svg.icon {
   width: 12px;
   height: 12px;
 }
@@ -2211,12 +2210,12 @@ select.input optgroup {
 .msb summary:hover {
   color: var(--text);
 }
-.msb summary svg.lucide {
+.msb summary svg.icon {
   width: 14px;
   height: 14px;
   transition: transform var(--mid) var(--ease);
 }
-.msb[open] summary svg.lucide {
+.msb[open] summary svg.icon {
   transform: rotate(180deg);
 }
 .msb-team {
@@ -2476,7 +2475,7 @@ select.input optgroup {
   background: var(--accent-soft);
   color: var(--text);
 }
-.mp-kill svg.lucide {
+.mp-kill svg.icon {
   width: 14px;
   height: 14px;
 }
@@ -2780,7 +2779,7 @@ select.input optgroup {
   font-size: 12px;
   color: var(--muted);
 }
-.hk-stored svg.lucide {
+.hk-stored svg.icon {
   color: var(--ok);
 }
 .hk-stored span {
@@ -2795,7 +2794,7 @@ select.input optgroup {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
 }
-.hk-msg svg.lucide {
+.hk-msg svg.icon {
   width: 14px;
   height: 14px;
   margin-top: 2px;
@@ -2891,7 +2890,7 @@ select.input optgroup {
   gap: 4px;
   color: var(--ok);
 }
-.acc-ok svg.lucide {
+.acc-ok svg.icon {
   width: 12px;
   height: 12px;
 }
@@ -3670,7 +3669,7 @@ select.input optgroup {
 .mt-clip:disabled {
   opacity: 0.4;
 }
-.mt-clip svg.lucide {
+.mt-clip svg.icon {
   width: 14px;
   height: 14px;
   color: var(--faint);
@@ -4063,11 +4062,20 @@ select.input optgroup {
 
 /* ========================================================================== What's new */
 
-.tb-news.is-new::after {
+/* an unseen update: the button names itself, with one red dot */
+.tb-news.is-new {
+  color: var(--text);
+  padding-right: 10px;
+}
+.tb-news.is-new span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.tb-news.is-new span::after {
   content: '';
-  position: absolute;
-  top: 7px;
-  right: 7px;
   width: 6px;
   height: 6px;
   border-radius: 50%;

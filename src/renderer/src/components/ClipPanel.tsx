@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Play, Trash2, Download, Scissors, FolderOpen, Check } from 'lucide-react'
+import { Play, Trash2, Download, Scissors, FolderOpen, Check } from '../lib/icons'
 import type { AudioMode, Clip, ExportMode, ExportQuality } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { useApp } from '../store'

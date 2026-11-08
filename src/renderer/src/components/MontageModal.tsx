@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUp, ArrowDown, X, Plus, Clapperboard } from 'lucide-react'
+import { ArrowUp, ArrowDown, X, Plus, Clapperboard } from '../lib/icons'
 import type { CardStyle, Clip, MontageItem, Project } from '@shared/types'
 import { locale, tr } from '@shared/i18n'
 import { useApp } from '../store'

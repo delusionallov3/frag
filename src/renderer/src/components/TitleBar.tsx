@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, Keyboard, Settings, Download, Sparkles } from 'lucide-react'
+import { ChevronLeft, Keyboard, Settings, Download, Sparkles } from '../lib/icons'
 import { tr } from '@shared/i18n'
 import { useApp } from '../store'
 import { baseName, fmtDuration, stripExt } from '../lib/format'
 
+/** The app icon (build/icon.png) as a small tile: the F and its red bar on the graphite square */
 export function Logo(): JSX.Element {
   return (
     <svg className="logo" viewBox="0 0 24 24" aria-hidden>
-      <path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="currentColor" />
-      <path d="M17 13h5l-1.5 7h-5z" fill="var(--accent)" />
+      <defs>
+        <linearGradient id="logo-tile" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#232325" />
+          <stop offset="1" stopColor="#121213" />
+        </linearGradient>
+      </defs>
+      <rect x=".5" y=".5" width="23" height="23" rx="5.5" fill="url(#logo-tile)" stroke="#ededed" strokeOpacity=".1" />
+      <g transform="translate(4.4 4.6) scale(.64)">
+        <path d="M5 4h14l-3 4H9.6l-.8 3H14l-2.6 4H7.7L6 20H2L5 4z" fill="#ededed" />
+        <path d="M17 13h5l-1.5 7h-5z" fill="var(--accent)" />
+      </g>
     </svg>
   )
 }
@@ -100,6 +110,7 @@ export default function TitleBar(): JSX.Element {
           title={tr('What’s new', 'Nouveautés')}
         >
           <Sparkles size={16} />
+          {unseen && <span>{tr('What’s new', 'Nouveautés')}</span>}
         </button>
         <button className="tb-btn" onClick={() => setShortcutsOpen(true)} title={tr('Keyboard shortcuts (?)', 'Raccourcis clavier (?)')}>
           <Keyboard size={16} />

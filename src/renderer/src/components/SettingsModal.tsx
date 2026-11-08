@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FolderOpen, RotateCcw, RefreshCw } from 'lucide-react'
+import { FolderOpen, RotateCcw, RefreshCw } from '../lib/icons'
 import { useAssets } from '../lib/assets'
 import type { EncoderPref, KeyboardLayout, UpdateStatus } from '@shared/types'
 import { locale, tr, type Lang } from '@shared/i18n'

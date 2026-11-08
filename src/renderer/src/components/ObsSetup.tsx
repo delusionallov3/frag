@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Check, FolderOpen, Loader2, PlugZap, ShieldCheck, X } from 'lucide-react'
+import { AlertTriangle, Check, FolderOpen, Loader2, PlugZap, ShieldCheck, X } from '../lib/icons'
 import type { ObsSettings, ObsTest } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { useApp } from '../store'

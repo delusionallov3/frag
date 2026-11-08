@@ -13,6 +13,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.3.1',
+    date: '2026-11-08',
+    title: ['A new coat of icons', 'De nouvelles icônes'],
+    items: [
+      [
+        'Every icon in the app now comes from one set, Phosphor: rounder, easier to read at small sizes.',
+        'Toutes les icônes de l’app viennent maintenant d’un seul jeu, Phosphor : plus rondes, plus lisibles en petit.'
+      ],
+      ['The title bar shows the app icon itself instead of a bare F.', 'La barre de titre affiche l’icône de l’app au lieu d’un F tout seul.'],
+      [
+        'After an update, the What’s new button names itself until you open it.',
+        'Après une mise à jour, le bouton Nouveautés s’affiche en toutes lettres jusqu’à ce que tu l’ouvres.'
+      ]
+    ]
+  },
+  {
     version: '0.3.0',
     date: '2026-11-08',
     title: ['Frag speaks English', 'Frag parle anglais'],

@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ScanSearch
-} from 'lucide-react'
+} from '../lib/icons'
 import type { AutoSyncResult, MatchCandidate, MatchData, MatchKill, MatchLink, MatchPlayer, RiotAccount } from '@shared/types'
 import { num, tr } from '@shared/i18n'
 import { useApp } from '../store'

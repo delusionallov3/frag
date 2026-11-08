@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight, Play, Pause, Repeat } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Play, Pause, Repeat } from '../lib/icons'
 import type { MatchLink, ReviewNote } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { GOOD_TAG, REVIEW_TAGS, reviewLists, tagLabel, type ReviewItem, type ReviewKind, type MatchInsights } from '../lib/review'

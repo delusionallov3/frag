@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3 } from '../lib/icons'
 import type { StatsEntry } from '@shared/types'
 import { useApp } from '../store'
 import { useLookup } from '../lib/assets'

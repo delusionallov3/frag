@@ -15,7 +15,7 @@ import {
   Redo2,
   Loader2,
   AlertTriangle
-} from 'lucide-react'
+} from '../lib/icons'
 import type { AutoSyncResult, Clip, MatchData, MatchLink, Marker, ReviewNote, RiotAccount, ThumbStrip, VideoMeta, Waveform } from '@shared/types'
 import { num, tr } from '@shared/i18n'
 import { useApp } from '../store'

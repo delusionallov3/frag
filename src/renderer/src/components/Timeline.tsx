@@ -11,7 +11,7 @@ import {
 } from 'react'
 import { tr } from '@shared/i18n'
 import { keyCap } from '../lib/keys'
-import { ZoomIn, ZoomOut, Maximize2, Magnet } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize2, Magnet } from '../lib/icons'
 import { useLookup } from '../lib/assets'
 import VImg from './VImg'
 import SpikeIcon from './SpikeIcon'

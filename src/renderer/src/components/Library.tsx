@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FolderOpen, Search, Film, FileVideo, AlertTriangle, Scissors, Clapperboard, Trash2 } from 'lucide-react'
+import { FolderOpen, Search, Film, FileVideo, AlertTriangle, Scissors, Clapperboard, Trash2 } from '../lib/icons'
 import type { CardInfo, VideoEntry } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { useApp } from '../store'
